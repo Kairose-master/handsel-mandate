@@ -19,7 +19,12 @@ async function loadStatus() {
     for (const [k, v] of [['데모 에이전트', status.agent.address], ['건당 한도', `${usdc(b.perCall)} USDC`], ['남은 총예산', `${usdc(b.remaining)} / ${usdc(b.total)} USDC (예산 만료 ${new Date(b.expiresAt).toLocaleTimeString()})`], ['이 시간 구매', String(b.purchases)]]) {
       const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; dd.className = 'mono'; info.append(dt, dd);
     }
-    $('run').disabled = false;
+    const f = status.agent.funding;
+    if (f) { const dt = document.createElement('dt'); dt.textContent = '지갑 잔액'; const dd = document.createElement('dd'); dd.className = 'mono'; dd.textContent = f.usdcBalance === null ? `확인 실패 (${f.error})` : `${f.usdcBalance} USDC (Base Sepolia)`; info.append(dt, dd); }
+    if (f && f.funded !== true) {
+      $('run').disabled = true;
+      $('run-status').replaceChildren(`데모 에이전트 지갑에 테스트넷 USDC가 없습니다. 아래 주소에 Base Sepolia USDC를 보내면 버튼이 켜집니다: ${f.address} · `, Object.assign(document.createElement('a'), { href: f.faucet, textContent: 'Circle 테스트넷 faucet', target: '_blank', rel: 'noopener' }));
+    } else $('run').disabled = false;
   } else { $('run').disabled = true; $('run-status').textContent = '이 서버에는 데모 에이전트 키가 없습니다. 오른쪽 curl 예제로 직접 구매하세요.'; }
   if (status.recent?.length) { $('recent').hidden = false; $('recent').textContent = status.recent.map(r => `${r.at}  ${r.route}  ${r.amount} µUSDC  ${r.internal ? '[internal]' : '[EXTERNAL]'}  ${r.explorer ?? r.transaction ?? ''}`).join('\n'); }
 }
@@ -56,6 +61,6 @@ $('run').addEventListener('click', async () => {
       $('run-status').textContent = run.mode === 'testnet' ? '테스트넷 구매 완료. Basescan 링크에서 USDC 전송을 직접 확인하세요.' : '로컬 시뮬레이션 완료. 서명은 검증됐지만 체인에는 아무것도 기록되지 않았습니다.';
     } else $('run-status').textContent = last?.status === 'blocked' ? '예산 정책이 결제를 차단했습니다. 서명은 만들어지지 않았습니다.' : `실패: ${run.error ?? last?.reason ?? '알 수 없음'}`;
   } catch (error) { $('run-status').textContent = `요청 실패: ${error.message}`; }
-  finally { await loadStatus().catch(() => {}); $('run').disabled = !status?.agent; }
+  finally { await loadStatus().catch(() => {}); }
 });
 loadStatus().catch(error => { $('run-status').textContent = `상태를 불러오지 못했습니다: ${error.message}`; });
