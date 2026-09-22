@@ -1,5 +1,9 @@
 # Handsel Mandate — browser prototype
 
+## Seller Studio · 판매자용 초안
+
+바이브 코딩으로 만든 도구의 상품 설명·호출 예제·가격을 정리하고, x402 연동 설정을 내보내는 로컬 스튜디오를 추가했습니다. `node scripts/seller-studio.js` 실행 후 `http://127.0.0.1:4173`을 여세요. 의존성 설치 없이 실행됩니다. 상품 미리보기·예산 제한 모의 구매·JSON 다운로드를 지원합니다. 실제 API 호출·결제·Bazaar 등록·공개 판매는 수행하지 않습니다. [범위와 다음 연동 단계](docs/seller-studio.md).
+
 사람이 예산·허용 도구·만료를 지정하고 브라우저 에이전트가 그 범위 안에서 모의 구매하는 Chrome MV3 확장 초안입니다.
 
 **v0.4: 온체인 제한 권한 + BlockFlow + x402.** Coinbase Smart Account에 `MandateValidator`를 컨트랙트 소유자로 설치합니다. 사람이 승인한 총예산·건당 한도·수령인·만료·에이전트·BlockFlow 바인딩을 체인에 기록하고, 에이전트가 결제 금액을 먼저 예약한 경우에만 해당 EIP-3009 결제를 허용합니다. 메인넷은 차단됩니다.

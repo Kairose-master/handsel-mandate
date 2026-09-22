@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BlockFlow — 만든 도구를 에이전트에게 판매하세요</title>
+  <link rel="stylesheet" href="./style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231321ef'/%3E%3Cpath d='M9 8h9v7h5v9H9z' fill='white'/%3E%3C/svg%3E">
+</head>
+<body>
+<header><a href="./">BlockFlow<span> / SELL</span></a><span class="badge">판매 준비 · 로컬 초안</span></header>
+<main>
+  <section class="intro"><p class="eyebrow">YOU BUILT IT. NOW PACKAGE IT.</p><h1>만든 도구를,<br>에이전트의 다음 구매로.</h1><p>도구를 연결하고 가격을 정하세요.<br>에이전트가 읽을 상품 정보와 결제 연동 설정을 준비합니다.</p></section>
+  <div class="workspace">
+  <section class="editor"><div class="section-title"><h2>01 / 판매할 도구</h2><button type="button" id="example" class="text-button">예제로 채우기</button></div>
+  <form id="product-form">
+    <label>상품 이름<input name="name" required maxlength="80" placeholder="예: PDF 표 추출기"></label>
+    <label>어떤 문제를 해결하나요?<textarea name="description" required minlength="10" maxlength="1000" placeholder="누가 어떤 입력을 넣으면 어떤 결과를 받는지 적어주세요."></textarea></label>
+    <div class="row endpoint"><label>방식<select name="method"><option>POST</option><option>GET</option></select></label><label>도구의 HTTPS 주소<input name="endpoint" type="url" required placeholder="https://your-api.com/extract"></label></div>
+    <p class="hint">API 주소만 입력하세요. 비밀키나 고객 데이터는 넣지 마세요. 이 화면은 주소를 호출하지 않습니다.</p>
+    <div class="row"><label>호출당 가격 · USDC<input name="price" inputmode="decimal" required placeholder="0.01"></label><label>테스트 네트워크<input value="Base Sepolia" disabled></label></div>
+    <label>판매자 수취 주소<input name="payTo" required pattern="0x[0-9a-fA-F]{40}" placeholder="0x…"></label>
+    <details open><summary>에이전트에게 보여줄 호출 예제</summary><label>입력 JSON<textarea name="request" required spellcheck="false" class="code" placeholder='{"fileUrl":"https://example.com/report.pdf"}'></textarea></label><label>출력 JSON<textarea name="response" required spellcheck="false" class="code" placeholder='{"tables":[]}'></textarea></label></details>
+    <button class="primary" type="submit">상품 미리보기 만들기 <span>↗</span></button>
+  </form><p id="form-status" role="status" aria-live="polite"></p></section>
+  <aside>
+    <section class="preview"><p class="eyebrow">YOUR AGENT-READY PRODUCT</p><div id="empty"><h2>작은 도구 하나면<br>시작할 수 있어요.</h2><p>입력과 출력이 있는 API를 상품으로 정리하세요. 구매자가 무엇을 받는지 명확할수록 좋습니다.</p><div class="tags"><span>문서 추출</span><span>이미지 처리</span><span>데이터 조회</span></div></div>
+    <div id="product" hidden><span class="badge">미공개 초안</span><h2 id="preview-name"></h2><p id="preview-description"></p><div class="price"><strong id="preview-price"></strong><span> USDC / 호출</span></div><p class="mono" id="preview-endpoint"></p><h3>예제 결과</h3><pre id="preview-output"></pre><button type="button" id="download" class="secondary">상품·연동 설정 다운로드</button><p class="hint">이 JSON은 자체 상품 초안입니다. Bazaar 등록이나 결제 활성화를 완료한 상태가 아닙니다.</p></div></section>
+    <section class="test"><h2>02 / 구매 흐름 확인</h2><p>정해둔 예산 안에서 예제 결과를 받는 흐름을 확인하세요.</p><label>건당 예산 · 모의 USDC<input id="budget" inputmode="decimal" value="0.05"></label><button id="simulate" type="button" class="secondary" disabled>모의 구매 실행</button><pre id="receipt" role="status" aria-live="polite">상품 초안을 먼저 만드세요.</pre><p class="hint">모의 구매는 외부 API 호출·서명·송금 없이 입력한 출력 예제를 반환합니다.</p></section>
+  </aside></div>
+  <footer><strong>공개 판매 전 확인할 것</strong><p>도구 소유권 확인 · 서버에 결제 검증 연결 · 테스트넷 정산 확인 · 발견 정보 설정</p><p>현재는 판매 준비용 프로토타입입니다. 메인넷 판매·공개 상품 링크·자동 고객 유입은 제공하지 않습니다.</p></footer>
+</main><script type="module" src="./app.js"></script>
+</body></html>
