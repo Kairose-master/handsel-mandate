@@ -1,0 +1,149 @@
+// x402-paywalled seller for one tool, built on the official @x402 server SDK
+// (exact / EIP-3009 on Base Sepolia USDC), plus the public demo page and a
+// server-run demo agent. Framework-free Node http.
+import { createServer } from 'node:http';
+import { appendFile, readFile } from 'node:fs/promises';
+import { x402ResourceServer, x402HTTPResourceServer, HTTPFacilitatorClient } from '@x402/core/server';
+import { ExactEvmScheme } from '@x402/evm/exact/server';
+import { convertMarkdownTables, MAX_INPUT_CHARS } from './tool.js';
+import { LocalSimulationFacilitator, NETWORK } from './facilitator-local.js';
+import { createDemoAgent } from './agent.js';
+
+const PAGE_FILES = new Map([['/', ['page.html', 'text/html']], ['/page.js', ['page.js', 'text/javascript']], ['/page.css', ['page.css', 'text/css']]]);
+const BASESCAN = 'https://sepolia.basescan.org/tx/';
+const same = (a, b) => typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
+
+export function productFor({ publicBaseUrl, price, payTo, mode }) {
+  return {
+    format: 'blockflow.product.v1', status: mode === 'testnet' ? 'testnet-preview' : 'local-simulation',
+    name: 'Markdown 표 → JSON 변환기', description: 'Markdown 문서에 포함된 표(GFM table)를 JSON으로 변환합니다. 공개 샘플 문서 변환은 GET, 직접 문서 전달은 POST를 사용합니다.',
+    network: NETWORK, currency: 'USDC', testnet: true, price, payTo,
+    endpoints: [
+      { method: 'GET', url: `${publicBaseUrl}/convert/sample`, description: '번들된 샘플 문서를 변환합니다. 입력이 없어 GET 전용 x402 클라이언트도 구매할 수 있습니다.' },
+      { method: 'POST', url: `${publicBaseUrl}/convert`, description: `{"markdown": "..."} 본문(최대 ${MAX_INPUT_CHARS}자)을 변환합니다.`, request: { markdown: '| a | b |\n|---|---|\n| 1 | 2 |' } },
+    ],
+    exampleResponse: { format: 'handsel.markdown-tables.v1', tableCount: 1, tables: [{ columns: ['a', 'b'], rows: [['1', '2']] }], sourceChars: 27 },
+    howToBuy: ['GET/POST 요청 → HTTP 402와 PAYMENT-REQUIRED 헤더(x402 v2, exact, eip155:84532 USDC)를 받습니다.', '요청한 금액의 EIP-3009 TransferWithAuthorization을 서명해 PAYMENT-SIGNATURE 헤더로 재요청합니다.', '200 응답 본문이 변환 결과, PAYMENT-RESPONSE 헤더가 정산 정보입니다.'],
+    verification: { onchainSettlement: mode === 'testnet', bazaarIndexed: false },
+  };
+}
+
+function adapterFor(req, url) {
+  const headers = req.headers;
+  return { getHeader: name => { const v = headers[name.toLowerCase()]; return Array.isArray(v) ? v[0] : v; }, getMethod: () => req.method ?? 'GET', getPath: () => url.pathname, getUrl: () => url.href, getAcceptHeader: () => String(headers.accept ?? ''), getUserAgent: () => String(headers['user-agent'] ?? ''), getQueryParams: () => Object.fromEntries(url.searchParams), getQueryParam: name => url.searchParams.get(name) ?? undefined };
+}
+async function readBody(req, limit) {
+  const chunks = []; let size = 0;
+  for await (const chunk of req) { size += chunk.length; if (size > limit) throw Object.assign(new Error('Request body too large'), { status: 413 }); chunks.push(chunk); }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+export function createDemoServer(options = {}) {
+  const mode = options.mode ?? 'local';
+  if (!['local', 'testnet'].includes(mode)) throw new Error('mode must be local or testnet');
+  const price = options.price ?? '0.01';
+  if (!/^(0|[1-9]\d{0,5})(\.\d{1,6})?$/.test(price) || Number(price) <= 0) throw new Error('price must be a positive USDC amount with at most six decimals');
+  const payTo = options.payTo;
+  if (!/^0x[0-9a-fA-F]{40}$/.test(payTo ?? '') || /^0x0{40}$/i.test(payTo)) throw new Error('SELLER_PAY_TO must be a non-zero EVM address');
+  const publicBaseUrl = String(options.publicBaseUrl ?? '').replace(/\/+$/, '');
+  if (!/^https?:\/\//.test(publicBaseUrl)) throw new Error('PUBLIC_BASE_URL is required (the URL buyers will see in the 402 quote)');
+  if (mode === 'testnet' && !publicBaseUrl.startsWith('https://')) throw new Error('testnet mode requires an https PUBLIC_BASE_URL');
+  const facilitator = options.facilitator ?? (mode === 'local' ? new LocalSimulationFacilitator() : new HTTPFacilitatorClient({ url: options.facilitatorUrl }));
+  const internalPayers = new Set((options.internalPayers ?? []).map(a => a.toLowerCase()));
+  const ledgerPath = options.ledgerPath ?? null;
+  const ledger = { external: 0, internal: 0, entries: [] };
+  const agent = options.agentKey ? createDemoAgent({ endpoint: `${publicBaseUrl}/convert/sample`, payTo, privateKey: options.agentKey, total: options.demoTotal ?? '0.10', perCall: price }) : null;
+  if (agent) internalPayers.add(agent.address.toLowerCase());
+  const runs = { inFlight: false, times: [], perHour: options.demoRunsPerHour ?? 20 };
+  const log = options.log ?? (() => {});
+
+  const accepts = { scheme: 'exact', network: NETWORK, price: `$${price}`, payTo, maxTimeoutSeconds: 60 };
+  const routes = {
+    'GET /convert/sample': { accepts, resource: `${publicBaseUrl}/convert/sample`, description: 'Convert the bundled sample Markdown document tables to JSON', mimeType: 'application/json' },
+    'POST /convert': { accepts, resource: `${publicBaseUrl}/convert`, description: 'Convert Markdown tables in the request body to JSON', mimeType: 'application/json' },
+  };
+  const paid = new x402HTTPResourceServer(new x402ResourceServer(facilitator).register(NETWORK, new ExactEvmScheme()), routes);
+  const product = productFor({ publicBaseUrl, price, payTo, mode });
+  let samplePromise;
+  const sample = () => (samplePromise ??= readFile(new URL('./sample.md', import.meta.url), 'utf8'));
+
+  async function record(entry) {
+    const internal = internalPayers.has(String(entry.payer ?? '').toLowerCase());
+    const row = { ...entry, internal, mode, at: new Date().toISOString() };
+    ledger[internal ? 'internal' : 'external']++;
+    ledger.entries.push(row); if (ledger.entries.length > 200) ledger.entries.shift();
+    if (ledgerPath) await appendFile(ledgerPath, JSON.stringify(row) + '\n').catch(error => log('ledger-write-failed', error.message));
+  }
+  function send(res, status, body, headers = {}) {
+    const text = typeof body === 'string' ? body : JSON.stringify(body);
+    res.writeHead(status, { 'Content-Type': typeof body === 'string' && !headers['Content-Type'] ? 'text/plain; charset=utf-8' : 'application/json; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store', 'Access-Control-Expose-Headers': 'PAYMENT-REQUIRED, PAYMENT-RESPONSE', ...headers });
+    res.end(text);
+  }
+  function sendInstructions(res, instructions) {
+    const { status, headers, body, isHtml } = instructions;
+    const text = isHtml || typeof body === 'string' ? String(body ?? '') : JSON.stringify(body ?? {});
+    res.writeHead(status, { 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store', 'Access-Control-Expose-Headers': 'PAYMENT-REQUIRED, PAYMENT-RESPONSE', ...headers });
+    res.end(text);
+  }
+
+  async function handlePaid(req, res, url, tool) {
+    const context = { adapter: adapterFor(req, url), path: url.pathname, method: req.method };
+    const outcome = await paid.processHTTPRequest(context);
+    if (outcome.type === 'no-payment-required') return send(res, 404, { error: 'Not found' });
+    if (outcome.type === 'payment-error') return sendInstructions(res, outcome.response);
+    let output;
+    try { output = await tool(); }
+    catch (error) {
+      // Nothing settled yet (authorization flow): release the verified payment.
+      await outcome.cancellationDispatcher?.cancel?.({ reason: 'handler_threw', error, responseStatus: error.status ?? 400 }).catch(() => {});
+      return send(res, error.status ?? 400, { error: error.message });
+    }
+    const body = JSON.stringify(output);
+    const settlement = await paid.processSettlement(outcome.paymentPayload, outcome.paymentRequirements, outcome.declaredExtensions, { request: context, responseBody: Buffer.from(body) });
+    if (!settlement.success) { log('settle-failed', settlement.errorReason); return sendInstructions(res, settlement.response); }
+    await record({ route: `${req.method} ${url.pathname}`, payer: settlement.payer ?? outcome.paymentPayload.payload?.authorization?.from, amount: outcome.paymentRequirements.amount, transaction: settlement.transaction, network: settlement.network });
+    send(res, 200, body, { ...settlement.headers, 'Content-Type': 'application/json; charset=utf-8' });
+  }
+
+  async function handleDemoRun(res) {
+    if (!agent) return send(res, 503, { error: '서버에 데모 에이전트 키가 없어 브라우저 실행이 꺼져 있습니다. 아래 curl 예제로 직접 구매하세요.' });
+    const nowMs = Date.now();
+    runs.times = runs.times.filter(t => nowMs - t < 3600000);
+    if (runs.inFlight) return send(res, 429, { error: '다른 데모 구매가 진행 중입니다. 잠시 후 다시 시도하세요.' });
+    if (runs.times.length >= runs.perHour) return send(res, 429, { error: '시간당 데모 실행 한도에 도달했습니다.' });
+    runs.inFlight = true; runs.times.push(nowMs);
+    try {
+      const run = await agent.purchase({ fetcher: options.agentFetcher ?? fetch });
+      const tx = run.receipt?.settlement?.transaction;
+      send(res, 200, { mode, testnet: true, ...run, explorer: mode === 'testnet' && /^0x[0-9a-fA-F]{64}$/.test(tx ?? '') ? `${BASESCAN}${tx}` : null });
+    } catch (error) { send(res, 500, { error: error.message }); }
+    finally { runs.inFlight = false; }
+  }
+
+  const server = createServer(async (req, res) => {
+    try {
+      const url = new URL(req.url ?? '/', publicBaseUrl);
+      const method = req.method ?? 'GET';
+      if (method === 'OPTIONS') { res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, PAYMENT-SIGNATURE', 'Access-Control-Expose-Headers': 'PAYMENT-REQUIRED, PAYMENT-RESPONSE' }); return res.end(); }
+      if (method === 'GET' && url.pathname === '/convert/sample') return await handlePaid(req, res, url, async () => convertMarkdownTables(await sample()));
+      if (method === 'POST' && url.pathname === '/convert') return await handlePaid(req, res, url, async () => {
+        let parsed; try { parsed = JSON.parse(await readBody(req, MAX_INPUT_CHARS * 4)); } catch (error) { throw Object.assign(new Error(error.status ? error.message : 'Body must be JSON {"markdown": "..."}'), { status: error.status ?? 400 }); }
+        if (typeof parsed?.markdown !== 'string') throw Object.assign(new Error('Body must be JSON {"markdown": "..."}'), { status: 400 });
+        return convertMarkdownTables(parsed.markdown);
+      });
+      if (method === 'GET' && url.pathname === '/product.json') return send(res, 200, product, { 'Access-Control-Allow-Origin': '*' });
+      if (method === 'GET' && url.pathname === '/health') return send(res, 200, { ok: true, mode, network: NETWORK, testnet: true });
+      if (method === 'GET' && url.pathname === '/demo/status') return send(res, 200, { mode, testnet: true, network: NETWORK, product: { name: product.name, price, payTo, endpoint: `${publicBaseUrl}/convert/sample` }, agent: agent ? { address: agent.address, budget: agent.budget() } : null, purchases: { external: ledger.external, internal: ledger.internal, note: '서버 데모 에이전트와 등록된 내부 주소의 구매는 internal로 따로 셉니다.' }, recent: ledger.entries.slice(-10).map(e => ({ at: e.at, route: e.route, amount: e.amount, transaction: e.transaction, internal: e.internal, explorer: mode === 'testnet' && /^0x[0-9a-fA-F]{64}$/.test(e.transaction ?? '') ? `${BASESCAN}${e.transaction}` : null })) });
+      if (method === 'POST' && url.pathname === '/demo/run') return await handleDemoRun(res);
+      const page = method === 'GET' || method === 'HEAD' ? PAGE_FILES.get(url.pathname) : undefined;
+      if (page) {
+        const body = await readFile(new URL(`./${page[0]}`, import.meta.url));
+        res.writeHead(200, { 'Content-Type': `${page[1]}; charset=utf-8`, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store', 'Content-Security-Policy': "default-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'" });
+        return res.end(method === 'HEAD' ? undefined : body);
+      }
+      send(res, 404, { error: 'Not found' });
+    } catch (error) { log('request-failed', error.message); if (!res.headersSent) send(res, error.status ?? 500, { error: error.status ? error.message : 'Internal error' }); else res.end(); }
+  });
+  server.requestTimeout = 30000;
+  return { server, paid, product, ledger, agent, facilitator, async initialize() { await paid.initialize(); return this; }, listen(port, host) { return new Promise((resolve, reject) => server.once('error', reject).listen(port, host, () => resolve(server.address()))); }, close() { return new Promise(resolve => server.close(() => resolve())); } };
+}
