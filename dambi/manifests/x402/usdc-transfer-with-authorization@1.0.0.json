@@ -1,0 +1,11 @@
+{
+  "type":"adapter_action",
+  "id":"handsel/x402/usdc-transfer-with-authorization@1.0.0",
+  "publisher":"handsel",
+  "schema_version":"3",
+  "note":"Proposed Dambi registry adapter for x402 exact payments using USDC EIP-3009 on Base Sepolia. The synthetic selector is sign-only.",
+  "match":{"selector":"0x00000009","chain_to_addresses":{"84532":["0x036cbd53842c5426634e7929541ec2318f3dcf7e"]},"typed_data":{"domain_name":"USDC","verifying_contract":"0x036cbd53842c5426634e7929541ec2318f3dcf7e","primary_type":"TransferWithAuthorization","types":{"TransferWithAuthorization":[{"name":"from","type":"address"},{"name":"to","type":"address"},{"name":"value","type":"uint256"},{"name":"validAfter","type":"uint256"},{"name":"validBefore","type":"uint256"},{"name":"nonce","type":"bytes32"}]}}},
+  "abi_fragment":{"function_name":"TransferWithAuthorization","abi":{"name":"TransferWithAuthorization","type":"function","inputs":[{"name":"from","type":"address"},{"name":"to","type":"address"},{"name":"value","type":"uint256"},{"name":"validAfter","type":"uint256"},{"name":"validBefore","type":"uint256"},{"name":"nonce","type":"bytes32"}]}},
+  "emit":{"strategy":"single_emit","body":{"domain":"token","token":{"action":"eip3009_transfer_authorization","eip3009_transfer_authorization":{"token":{"key":{"standard":"erc20","chain":"$chain","address":"$to"}},"owner":"$args.from","recipient":"$args.to","amount":"$args.value","valid_after":"$args.validAfter","valid_before":"$args.validBefore","nonce":"$args.nonce"}}}},
+  "requires":{"imperative":[],"adapter_capabilities":["token_metadata"],"host_capabilities":[],"extension":">=0.1.0"}
+}

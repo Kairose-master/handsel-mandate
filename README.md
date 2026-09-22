@@ -6,6 +6,8 @@
 
 새 Session 모드에는 소유자 키가 없으며 에이전트는 임의 전송·새 위임 발급을 할 수 없습니다. 회수가 체인에 확정되면 미결제 예약도 무효화됩니다. 영수증은 RPC의 USDC Transfer + AuthorizationUsed nonce와 대조합니다. 실제 Base Sepolia 배포·정산은 아직 실행하지 않았습니다. [설치·검증 범위](docs/session-payments.md)를 확인하세요. 이전 full-owner 모드는 기존 설정에서만 남아 있으며 동일한 보안 보장을 제공하지 않습니다.
 
+x402 서명은 예산 예약 전에 [DAMBI 호환 사전 정책 게이트](docs/dambi-integration.md)를 통과해야 합니다. 에이전트 실행에서는 `allow / evaluated / enforcing` 판정만 허용합니다.
+
 ## 설치
 
 1. 이 저장소를 clone 또는 Download ZIP으로 받습니다.

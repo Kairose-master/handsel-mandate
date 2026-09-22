@@ -1,0 +1,19 @@
+namespace Token {
+  type Eip3009TransferAuthorizationContext = {
+    meta: Core::ActionMeta,
+    token: Core::TokenRef,
+    owner: String,
+    recipient: String,
+    amount: String,
+    valid_after: String,
+    valid_before: String,
+    nonce: String,
+    custom?: Eip3009TransferAuthorizationCustomContext,
+  };
+  type Eip3009TransferAuthorizationCustomContext = {};
+  action "Eip3009TransferAuthorization" appliesTo {
+    principal: Wallet,
+    resource: Protocol,
+    context: Eip3009TransferAuthorizationContext,
+  };
+}

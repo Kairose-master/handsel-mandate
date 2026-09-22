@@ -2,6 +2,7 @@ import {createPublicClient,createWalletClient,http,encodeAbiParameters,parseAbi,
 import {privateKeyToAccount} from 'viem/accounts';
 import {baseSepolia} from 'viem/chains';
 import artifact from './validator-artifact.json' with {type:'json'};
+import {checkX402Risk} from './dambi.js';
 export const validatorAbi=artifact.abi;
 export const walletAbi=parseAbi([
   'function ownerAtIndex(uint256) view returns (bytes)',
@@ -62,10 +63,12 @@ export function assertPaymentTypedData(td,m){
 export function wrapValidatorSignature(index,signatureData){
   return encodeAbiParameters([{type:'tuple',components:[{name:'ownerIndex',type:'uint256'},{name:'signatureData',type:'bytes'}]}],[{ownerIndex:BigInt(index),signatureData}]);
 }
-export async function sessionSigner(config,m,record){
+export async function sessionSigner(config,m,record,{riskEvaluator}={}){
   const {s,client,writer,account}=await checkGrant(config,m);
   return {account:{address:s.wallet,async signTypedData(td){
     const digest=assertPaymentTypedData(td,m);
+    const risk=await checkX402Risk(td,m,riskEvaluator);
+    await record({risk:{decision:risk.verdict.decision,source:risk.verdict.source,enforcement:risk.verdict.enforcement,action:risk.action.body.token.action}});
     const a=Object.fromEntries(Object.entries(td.message).map(([k,v])=>[k,['value','validAfter','validBefore'].includes(k)?BigInt(v):v]));
     // Persist the authorization before the onchain reservation. No EIP-1271 signing
     // can mutate state, hence reservations are separate, serial, nonrefundable txs.

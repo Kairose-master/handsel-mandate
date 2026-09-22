@@ -1,0 +1,1 @@
+{"id":"x402-exact-mandate","schema_version":2,"trigger":{"where":{"action.tag":{"eq":"eip3009_transfer_authorization"}}},"custom_context":{"fields":{"mandate_owner":"String","mandate_recipient":"String","mandate_amount":"String"}}}
