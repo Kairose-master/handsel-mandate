@@ -6,6 +6,7 @@ async function loadStatus() {
   status = await res.json();
   $('mode-badge').textContent = status.mode === 'testnet' ? 'Base Sepolia 테스트넷 · 실제 테스트넷 정산' : '로컬 시뮬레이션 · 체인 미사용';
   $('product-name').textContent = status.product.name;
+  $('product-description').textContent = status.product.description ?? '';
   $('product-price').textContent = status.product.price;
   $('product-endpoint').textContent = `GET ${status.product.endpoint}`;
   $('product-payto').textContent = status.product.payTo;

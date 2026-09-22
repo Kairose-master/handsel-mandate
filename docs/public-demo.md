@@ -6,7 +6,10 @@
 
 | 파일 | 역할 |
 |---|---|
-| `demo/tool.js` | 판매하는 도구 하나: Markdown 표 → JSON 변환기 (의존성 없음) |
+| `demo/tool.js` | 기본 판매 도구: Markdown 표 → JSON 변환기 (의존성 없음) |
+| `demo/upstream.js` | **판매자용 x402 프록시.** 판매자의 기존 API 앞에 결제 게이트를 세우고, 결제된 호출만 공유 비밀 헤더와 함께 전달합니다. Seller Studio 내보내기 파일을 그대로 읽습니다 |
+| `demo/config.js` | 환경 변수 파싱 (`node demo/server.js`와 Vercel 핸들러 공용) |
+| `api/index.js` · `vercel.json` | Vercel 배포용 핸들러와 라우팅 |
 | `demo/seller.js` | 공식 `@x402/core` + `@x402/evm` 서버 SDK로 `GET /convert/sample`, `POST /convert`에 x402 v2 exact/EIP-3009 결제 게이트를 건 판매자 서버. `product.json`, 공개 데모 페이지, 서버 실행 데모 에이전트, 내부/외부 구매 집계 포함 |
 | `demo/agent.js` | 데모 구매 에이전트. 기존 `runtime/buyer.js`의 `buy()`·`validateQuote()`를 그대로 사용해 402 견적 → 예산 확인 → 서명 → 결과 수령 단계를 기록 |
 | `demo/facilitator-local.js` | 체인 없는 로컬 모드용 facilitator 대역. 실제 EIP-3009 서명을 검증하지만 정산은 시뮬레이션이며 응답에 `simulation: true`를 표시 |
@@ -45,9 +48,30 @@ PORT=4402 npm run demo
 
 내 에이전트로 직접 구매: `SELLER_PAY_TO`, `DEMO_AGENT_KEY`, `DEMO_ENDPOINT=https://.../convert/sample`을 지정하고 `npm run demo:buy`. 다른 x402 v2 클라이언트도 `curl -i .../convert/sample`로 402를 받은 뒤 그대로 결제할 수 있습니다.
 
+## 판매자: 내 API 앞에 결제 게이트 세우기
+
+판매자는 코드를 고치지 않습니다. Seller Studio에서 내려받은 `blockflow-product-draft.json`과 비밀 문자열 하나로 프록시를 띄웁니다.
+
+```
+PRODUCT_FILE=./blockflow-product-draft.json \
+UPSTREAM_SECRET=$(openssl rand -hex 24) \
+DEMO_MODE=testnet PUBLIC_BASE_URL=https://pay.your-domain.example \
+DEMO_AGENT_KEY=0xTestnetOnlyKey npm run demo
+```
+
+파일 없이 환경 변수로도 됩니다: `UPSTREAM_URL`, `UPSTREAM_METHOD`, `PRODUCT_NAME`, `PRODUCT_DESCRIPTION`, `PRODUCT_EXAMPLE_REQUEST`(JSON), `PRODUCT_PRICE`, `SELLER_PAY_TO`.
+
+동작: 프록시가 업스트림과 같은 경로(예: `POST /extract`)를 공개하고, 결제된 요청만 업스트림으로 전달합니다. 전달 요청에는 `x-paywall-secret: <UPSTREAM_SECRET>`과 `x-paid-by: <구매자 주소>`가 붙습니다. **판매자 API는 이 비밀 헤더가 없는 호출을 거부해야** 프록시를 우회한 무료 호출을 막을 수 있습니다. `GET /extract/sample`은 Studio에 적은 예제 입력을 그대로 보내는 경로라 GET 전용 에이전트(데모 에이전트 포함)도 구매할 수 있습니다.
+
+업스트림이 2xx가 아니면 검증된 결제를 취소하고 구매자에게 502를 돌려주므로, 실패한 호출에는 정산이 일어나지 않습니다. 잠금: https 고정, 리다이렉트 금지, 20초 타임아웃, 요청 256KB·응답 1MB 제한, 쿼리·자격증명이 있는 URL 거부, 판매자당 엔드포인트 하나. 비밀은 `product.json`에 나가지 않습니다.
+
+## Vercel 배포
+
+저장소 루트가 그대로 Vercel 프로젝트입니다 (`api/index.js`가 모든 경로를 받고 `vercel.json`이 재작성). 환경 변수는 위와 같고, `PUBLIC_BASE_URL`을 비우면 프로덕션 도메인을 자동으로 씁니다. 서버리스라 구매 집계·데모 예산·로컬 모드의 nonce 기록은 인스턴스 메모리에만 있고 JSONL 원장은 꺼집니다. 집계가 필요하면 로그 드레인이나 외부 저장소를 붙이세요. 브라우저 버튼의 데모 에이전트는 같은 인스턴스에 루프백으로 접속해 구매하므로 배포 보호 설정과 무관하게 동작합니다.
+
 ## 검증 상태
 
-- 자동 테스트: 실제 x402 SDK가 양쪽(판매자 서버, 구매 에이전트)에서 동작하고, 서명·금액·수취인·nonce 재사용이 검증됩니다. 체인은 사용하지 않습니다.
+- 자동 테스트: 실제 x402 SDK가 양쪽(판매자 서버, 구매 에이전트)에서 동작하고, 서명·금액·수취인·nonce 재사용이 검증됩니다. 프록시는 가짜 업스트림으로 비밀 헤더 전달, 미결제 차단, 업스트림 실패 시 결제 취소를 검증합니다. 체인은 사용하지 않습니다.
 - **실제 Base Sepolia 정산은 이 변경에서 실행하지 않았습니다.** 자금 있는 테스트넷 키와 공개 https 도메인이 필요합니다. 테스트넷 모드로 배포한 뒤 첫 구매의 tx 해시를 이 문서에 기록하세요.
 - 데모 에이전트는 EOA이며 Handsel의 온체인 위임 경로(Coinbase Smart Account + MandateValidator + BlockFlow 바인딩 + DAMBI 게이트)를 쓰지 않습니다. 예산은 구매 프로세스 안에서만 강제됩니다. 이 경로 연결은 [seller-studio.md](seller-studio.md)의 게이트 5입니다.
 - 없는 것: 메인넷, 환불·에스크로, Bazaar 등록, 판매자 로그인, 자동 고객 유입.
