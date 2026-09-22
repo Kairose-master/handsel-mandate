@@ -108,3 +108,24 @@ test('paid calls are forwarded to the seller API with the shared secret; unpaid 
     assert.equal((await fetch(`http://127.0.0.1:${upPort}/extract`, { method: 'POST', body: '{}' })).status, 401);
   } finally { await demo.close(); await up.close(); }
 });
+
+test('testnet mode gates the browser-run agent on the wallet USDC balance', async () => {
+  const { LocalSimulationFacilitator } = await import('../demo/facilitator-local.js');
+  let balance = 0n;
+  const make = port => createDemoServer({ mode: 'testnet', payTo: PAY_TO, publicBaseUrl: 'https://demo.example', facilitator: new LocalSimulationFacilitator(), agentKey: generatePrivateKey(), balanceReader: async () => balance, agentFetcher: (url, o) => fetch(String(url).replace('https://demo.example', `http://127.0.0.1:${port}`), o) });
+  const probe = make(1); const { port } = await probe.listen(0, '127.0.0.1'); await probe.close();
+  const demo = make(port); await demo.initialize(); await demo.listen(port, '127.0.0.1');
+  const base = `http://127.0.0.1:${port}`;
+  try {
+    const status = await (await fetch(`${base}/demo/status`)).json();
+    assert.equal(status.mode, 'testnet');
+    assert.deepEqual([status.agent.funding.funded, status.agent.funding.usdcBalance], [false, '0']);
+    const blocked = await fetch(`${base}/demo/run`, { method: 'POST' });
+    assert.equal(blocked.status, 409);
+    assert.match((await blocked.json()).error, /USDC/);
+    assert.equal(demo.facilitator.settled.length, 0);
+    balance = 5000n; // below the 0.01 price
+    await new Promise(r => setTimeout(r, 20)); // cache still holds 0 → still blocked
+    assert.equal((await fetch(`${base}/demo/run`, { method: 'POST' })).status, 409);
+  } finally { await demo.close(); }
+});
