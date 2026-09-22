@@ -10,9 +10,10 @@
 <header><a href="./">BlockFlow<span> / DEMO</span></a><span class="badge" id="mode-badge">불러오는 중…</span></header>
 <main>
   <section class="intro">
-    <p class="eyebrow">ONE TOOL · ONE AGENT · ONE TESTNET PURCHASE</p>
-    <h1>만든 도구를 에이전트가<br>호출당 결제하고 결과를 받습니다.</h1>
-    <p>아래 버튼은 이 서버가 띄운 데모 에이전트를 실행합니다. 에이전트는 상품을 발견하고, 허용 예산을 확인한 뒤, 테스트넷 USDC를 결제하고 변환 결과를 받습니다. 모든 단계가 그대로 표시됩니다.</p>
+    <p class="eyebrow">VIBE-CODED? AGENTS WILL PAY PER CALL.</p>
+    <h1>바이브 코딩으로 만든 제품,<br>에이전트가 사서 쓰게 만들어드립니다.</h1>
+    <p>작동하는 API 주소 하나만 보내주세요. 결제 게이트, 에이전트가 읽는 상품 설명, 구매 링크를 붙여 드립니다. 아래는 저희가 만든 도구 하나로 그 흐름을 끝까지 돌린 것입니다. 버튼을 누르면 데모 에이전트가 상품을 발견하고, 허용 예산을 확인하고, 테스트넷 USDC를 결제하고, 결과를 받습니다.</p>
+    <p class="cta-row"><a class="button-link" href="#sell">내 도구 판매 신청 →</a><span class="hint">개발자 프리뷰 · 테스트넷 · 구매자 유입이나 매출을 보장하지 않습니다</span></p>
   </section>
   <div class="grid">
     <div>
@@ -55,6 +56,17 @@
       </section>
     </div>
   </div>
+  <section class="sell" id="sell">
+    <p class="eyebrow">05 / 내 도구도 팔고 싶다면</p>
+    <h2>작동하는 API를 가진 개발자 3명과 첫 판매 흐름을 함께 만듭니다.</h2>
+    <ol class="how">
+      <li><strong>엔드포인트 하나를 보냅니다.</strong> 입력·출력 예제와 호출당 가격(USDC), 수취 주소면 충분합니다. 비밀키나 고객 데이터는 받지 않습니다.</li>
+      <li><strong>결제 게이트를 붙입니다.</strong> 코드는 그대로 두고, 결제된 호출만 공유 비밀 헤더와 함께 API로 전달하는 x402 프록시를 세웁니다. 실패한 호출에는 정산이 없습니다.</li>
+      <li><strong>구매 링크를 받습니다.</strong> 위와 같은 페이지, 에이전트가 읽는 product.json, 402 → 서명 → 결과 한 줄 예제. 기존 소개 글과 문서에 붙이면 됩니다.</li>
+    </ol>
+    <p><a class="button-link" href="https://github.com/Kairose-master/handsel-mandate/issues/new?template=sell-your-tool.yml">판매 신청서 작성 (GitHub)</a></p>
+    <p class="hint">지금은 개발자 프리뷰입니다. Base Sepolia 테스트넷에서 먼저 연결하고, 첫 외부 구매가 확인된 뒤에 다음 단계를 정합니다. 메인넷·환불·에스크로·자동 고객 유입은 없습니다.</p>
+  </section>
   <footer>
     <p><strong>범위</strong> · 이 데모는 도구 하나의 x402 구매를 테스트넷에서 끝까지 연결한 것입니다. 데모 에이전트는 서버가 보관한 테스트넷 전용 키를 쓰는 EOA이며, Handsel의 온체인 위임(스마트 계정·MandateValidator) 경로는 사용하지 않습니다.</p>
     <p>메인넷 결제, 환불, 에스크로, Bazaar 등록, 판매자 로그인은 아직 없습니다. 판매 성과나 구매자 유입을 보장하지 않습니다.</p>
