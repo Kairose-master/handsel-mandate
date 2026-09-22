@@ -2,9 +2,9 @@
 
 사람이 예산·허용 도구·만료를 지정하고 브라우저 에이전트가 그 범위 안에서 모의 구매하는 Chrome MV3 확장 초안입니다.
 
-**v0.3: BlockFlow + ERC-4337 AA + Base Sepolia x402 경로.** Native Host는 고정된 BlockFlow 커밋으로 위임 BPMN을 IR/Solidity/Foundry 테스트까지 컴파일하고, 정책과 산출물 해시를 바인딩합니다. 배포된 Coinbase Smart Account가 EIP-1271 형식으로 x402 v2 결제에 서명합니다. 메인넷은 차단됩니다.
+**v0.4: 온체인 제한 권한 + BlockFlow + x402.** Coinbase Smart Account에 `MandateValidator`를 컨트랙트 소유자로 설치합니다. 사람이 승인한 총예산·건당 한도·수령인·만료·에이전트·BlockFlow 바인딩을 체인에 기록하고, 에이전트가 결제 금액을 먼저 예약한 경우에만 해당 EIP-3009 결제를 허용합니다. 메인넷은 차단됩니다.
 
-현재 예산 집행자는 로컬 Native Host입니다. BlockFlow 컨트랙트는 아직 배포하지 않으며 Coinbase Smart Account에 제한된 session key 모듈을 설치하지도 않습니다. 따라서 이것은 **AA 결제 연결 프로토타입**이지 온체인 강제형 위임 완성본이 아닙니다. 전용 테스트넷 계정만 사용하세요. 설치와 검증 범위는 [실제 결제 설정](docs/live-payments.md)을 보세요.
+새 Session 모드에는 소유자 키가 없으며 에이전트는 임의 전송·새 위임 발급을 할 수 없습니다. 회수가 체인에 확정되면 미결제 예약도 무효화됩니다. 영수증은 RPC의 USDC Transfer + AuthorizationUsed nonce와 대조합니다. 실제 Base Sepolia 배포·정산은 아직 실행하지 않았습니다. [설치·검증 범위](docs/session-payments.md)를 확인하세요. 이전 full-owner 모드는 기존 설정에서만 남아 있으며 동일한 보안 보장을 제공하지 않습니다.
 
 ## 설치
 
@@ -44,10 +44,12 @@ Node 22+에서 `npm ci` 후 `npm test`. BlockFlow 통합 테스트까지 실행�
 
 ## 통합 구조
 
-`위임 입력 → BlockFlow BPMN/IR/soundness/Solidity → 산출물+정책 바인딩 → ERC-4337 EIP-1271 signer → x402 EIP-3009 → 영수증` 순서입니다. BlockFlow 검증 실패, 컴파일러 커밋 불일치, 바인딩 변경, 미배포 AA 계정, EIP-1271 호환성 실패 중 하나라도 있으면 서명 전에 닫힙니다.
+`위임 입력 → BlockFlow 검증·산출물 바인딩 → 사람이 온체인 grant → 에이전트 reserve → EIP-1271 x402 결제 → RPC 영수증 대조` 순서입니다. 컴파일러 커밋·작업트리·정책·컨트랙트 바이트코드·소유자 슬롯을 검사하고 불일치하면 차단합니다.
+
+BlockFlow는 워크플로 구조를 검증합니다. 예산 제약은 별도로 작성한 `MandateValidator`가 집행하며, BlockFlow가 임의 BPMN 전체를 지출 모듈로 자동 변환하는 것은 아닙니다. endpoint와 자연어 목표는 온체인 결제 의미로 강제되지 않습니다.
 
 ## 다음 단계
 
-다음 보안 마일스톤은 BlockFlow가 생성한 정책을 스마트계정 validator/session-key 모듈로 내려 예산·수령인·만료를 온체인에서 강제하고, 영수증 트랜잭션을 RPC로 독립 검증하는 것입니다. 기존 Handsel 전체 코드를 가져오지 않고 구매 경로 하나부터 검증합니다.
+남은 검증은 실제 Base Sepolia USDC와 facilitator를 이용한 배포·정산, 별도 보안 검토, 사람 지갑 승인 UI입니다. 현재 승인은 로컬 human-only CLI이고 구매마다 예약 가스가 발생합니다. 임의 UserOperation에 대한 session 권한이나 범용 ERC-7579 모듈을 주장하지 않습니다.
 
 References: [Chrome Side Panel](https://developer.chrome.com/docs/extensions/reference/api/sidePanel), [Messaging](https://developer.chrome.com/docs/extensions/develop/concepts/messaging), [x402 Bazaar](https://docs.x402.org/extensions/bazaar).

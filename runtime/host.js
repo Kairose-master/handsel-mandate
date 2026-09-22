@@ -6,6 +6,8 @@ import {privateKeyToAccount} from 'viem/accounts';
 import {buy,liveMandate} from './buyer.js';
 import {aaStatus,provisionAA,verifyAASigner} from './aa.js';
 import {assertWorkflowBinding,compileMandateWorkflow} from './blockflow.js';
+import {checkSession,revokeSession} from './session.js';
+import {verifySettlement} from './settlement.js';
 const root=path.dirname(fileURLToPath(import.meta.url));
 const configPath=path.join(root,'config.local.json'),statePath=path.join(root,'state.local.json'),lock=path.join(root,'state.lock');
 function save(s){const temp=statePath+'.tmp';const fd=fs.openSync(temp,'w',0o600);try{fs.writeFileSync(fd,JSON.stringify(s));fs.fsyncSync(fd);}finally{fs.closeSync(fd);}fs.renameSync(temp,statePath);}
@@ -20,7 +22,29 @@ async function dispatch(msg){
   try {
     const s=fs.existsSync(statePath)?JSON.parse(fs.readFileSync(statePath,'utf8')):{mandate:null,receipts:[]};
     if(msg.type==='aa.provision')return await provisionAA(c);
-    if(msg.type==='live.revoke'){if(s.mandate)s.mandate.revoked=true;save(s);return s;}
+    if(msg.type==='live.revoke'){
+      if(s.mandate){s.mandate.revoked=true;save(s);
+        if(c.session){s.mandate.revokeTransaction=await revokeSession(c,s.mandate);save(s);}
+      }return s;
+    }
+    if(c.session){
+      const ctx=await checkSession(c);
+      if(msg.type==='live.status')return {...s,aa:{address:ctx.s.wallet,type:'onchain-reserved-session'},agent:ctx.account.address,endpoint:c.endpoint,payTo:c.payTo};
+      if(msg.type==='live.create'){
+        if(s.mandate&&!s.mandate.revoked&&Date.now()<s.mandate.expiresAt)throw Error('Revoke previous mandate first');
+        const m=liveMandate(msg.input,c);m.mode='onchain-session';m.expiresAt=Math.floor(m.expiresAt/1000)*1000;
+        m.aaAddress=ctx.s.wallet;m.validator=ctx.s.validator;m.agent=ctx.account.address;
+        m.workflow=compileMandateWorkflow(c,m);m.approval='owner-grant-required';s.mandate=m;save(s);return m;
+      }
+      if(msg.type==='live.reconcile'){
+        for(const r of s.receipts.filter(r=>r.authorization&&r.settlement?.success===true&&!['chain-verified','paid-response-failed'].includes(r.status))){
+          try{r.proof=await verifySettlement(c,r);r.status=r.httpStatus>=200&&r.httpStatus<300?'chain-verified':'paid-response-failed';delete r.verificationError;}
+          catch(e){r.verificationError=e.message;}
+        }save(s);return s;
+      }
+      if(msg.type==='live.purchase')return await buy(c,s,msg,save);
+      throw Error('Unknown session operation');
+    }
     const aa=c.aa?await aaStatus(c):{type:'legacy-eoa',address:privateKeyToAccount(c.privateKey).address,deployed:false};
     if(msg.type==='live.status'){
       if(s.mandate)assertWorkflowBinding(s.mandate);

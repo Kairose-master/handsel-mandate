@@ -17,7 +17,7 @@ function canonical(value){
 }
 
 export function workflowPolicy(mandate){
-  return {id:mandate.id,network:mandate.network??'eip155:84532',endpoint:mandate.endpoint,payTo:mandate.payTo.toLowerCase(),asset:mandate.asset,total:mandate.total,perCall:mandate.perCall,expiresAt:mandate.expiresAt,aaAddress:mandate.aaAddress.toLowerCase()};
+  return {id:mandate.id,network:mandate.network??'eip155:84532',endpoint:mandate.endpoint,payTo:mandate.payTo.toLowerCase(),asset:mandate.asset,total:mandate.total,perCall:mandate.perCall,expiresAt:mandate.expiresAt,aaAddress:mandate.aaAddress.toLowerCase(),...(mandate.validator?{validator:mandate.validator.toLowerCase(),agent:mandate.agent.toLowerCase()}: {})};
 }
 
 export function assertWorkflowBinding(mandate){
@@ -33,6 +33,7 @@ export function compileMandateWorkflow(config,mandate){
   if(!config.blockflowRoot||!fs.existsSync(path.join(root,'package.json')))throw Error('Configure blockflowRoot to a checked-out BlockFlow repository');
   const commit=execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8',timeout:5000}).trim();
   if(commit!==BLOCKFLOW_COMMIT)throw Error(`BlockFlow commit mismatch: expected ${BLOCKFLOW_COMMIT}, got ${commit}`);
+  if(execFileSync('git',['-C',root,'status','--porcelain','--untracked-files=normal'],{encoding:'utf8',timeout:5000}).trim())throw Error('BlockFlow checkout must be clean');
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'handsel-blockflow-'));
   try{
     const irFile=path.join(temp,'mandate.ir.json'),solFile=path.join(temp,'Mandate.sol'),testFile=path.join(temp,'Mandate.t.sol');

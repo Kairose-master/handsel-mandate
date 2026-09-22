@@ -1,5 +1,7 @@
 # Integration boundaries
 
+> Historical v0.3 boundaries below. For v0.4's enforced session, reservation/revocation behavior and independent settlement reconciliation, see [session-payments.md](session-payments.md). v0.3 full-owner configuration remains legacy-only.
+
 ## BlockFlow
 
 BlockFlow remains an independent repository. This adapter pins commit `a43efa3788115a16e12f0ebea22416ed61de053d` and invokes its real BPMN parser, structure validator, soundness checker, Solidity generator, and Foundry-test generator. A different commit or any compile failure stops mandate creation.

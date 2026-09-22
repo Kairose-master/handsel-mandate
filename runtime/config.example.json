@@ -3,12 +3,9 @@
   "endpoint": "https://YOUR-TESTNET-SELLER.example/paid",
   "payTo": "0xYOUR_SELLER_ADDRESS",
   "blockflowRoot": "/absolute/path/to/BlockFlow",
-  "aa": {
-    "type": "coinbase-smart-account",
-    "version": "1.1",
+  "session": {
+    "wallet": "0xYOUR_EXISTING_COINBASE_SMART_ACCOUNT",
     "rpcUrl": "https://YOUR_BASE_SEPOLIA_RPC",
-    "bundlerUrl": "https://YOUR_ERC4337_BUNDLER",
-    "usePaymaster": false,
-    "ownerPrivateKey": "0xYOUR_DEDICATED_TESTNET_AA_OWNER_PRIVATE_KEY"
+    "agentPrivateKey": "0xYOUR_DEDICATED_AGENT_KEY"
   }
 }

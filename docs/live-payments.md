@@ -1,5 +1,7 @@
 # Base Sepolia real x402 path
 
+> This page documents the legacy v0.3 full-owner path. New installations use the v0.4 session config and [session-payments.md](session-payments.md). The legacy mode does not provide onchain delegation limits. Its AA config must not be combined with Session mode.
+
 ## Implemented vs verified
 
 Implemented: extension → Chrome Native Messaging → BlockFlow compile/bind → deployed ERC-4337 Coinbase Smart Account → EIP-1271 compatibility probe → HTTP 402 → policy validation → durable budget reservation → real x402 SDK EIP-3009 signature → paid HTTP retry → response/settlement receipt.

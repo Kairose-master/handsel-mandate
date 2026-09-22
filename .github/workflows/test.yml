@@ -1,0 +1,28 @@
+name: Test session payments
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - uses: actions/checkout@v4
+        with:
+          repository: Kairose-master/BlockFlow
+          ref: a43efa3788115a16e12f0ebea22416ed61de053d
+          path: vendor-blockflow
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+          run_install: false
+      - run: pnpm install --frozen-lockfile
+        working-directory: vendor-blockflow
+      - run: npm test
+        env:
+          BLOCKFLOW_ROOT: ${{ github.workspace }}/vendor-blockflow

@@ -5,6 +5,8 @@ import {privateKeyToAccount} from 'viem/accounts';
 import {units} from '../extension/policy.js';
 import {createAASigner} from './aa.js';
 import {assertWorkflowBinding} from './blockflow.js';
+import {sessionSigner} from './session.js';
+import {verifySettlement} from './settlement.js';
 
 export const NETWORK='eip155:84532';
 export const ASSET='0x036cbd53842c5426634e7929541ec2318f3dcf7e';
@@ -33,7 +35,7 @@ async function limitedText(response){
   for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>128000){await reader.cancel();throw Error('Response too large');}chunks.push(Buffer.from(value));}
   return Buffer.concat(chunks).toString('utf8');
 }
-export async function buy(config,state,request,save,{fetcher=fetch,verifyWorkflow=assertWorkflowBinding,signerFactory=createAASigner}={}) {
+export async function buy(config,state,request,save,{fetcher=fetch,verifyWorkflow=assertWorkflowBinding,signerFactory=createAASigner,sessionFactory=sessionSigner,settlementVerifier=verifySettlement}={}) {
   if(!/^[\w-]{1,100}$/.test(request.requestId??'')) throw Error('Invalid request ID');
   const m=state.mandate;
   if(!m||request.mandateId!==m.id) throw Error('Stale mandate');
@@ -47,21 +49,25 @@ export async function buy(config,state,request,save,{fetcher=fetch,verifyWorkflo
   if(!header||header.length>20000)throw Error('Missing or oversized PAYMENT-REQUIRED');
   const required=decodePaymentRequiredHeader(header);
   const q=validateQuote(required,config,m);
-  const receipt={requestId:request.requestId,mandateId:m.id,amount:Number(q.amount),status:'reserved',at:Date.now(),network:NETWORK};
+  const receipt={requestId:request.requestId,mandateId:m.id,amount:Number(q.amount),asset:ASSET,status:'reserved',at:Date.now(),network:NETWORK};
   m.reserved+=receipt.amount;state.receipts.push(receipt);await save(state);
   // Reservations remain consumed after errors: a signed authorization might settle later.
   try {
-    const signer=config.aa?(await signerFactory(config)).account:privateKeyToAccount(config.privateKey);
-    if(config.aa&&signer.address.toLowerCase()!==m.aaAddress?.toLowerCase())throw Error('AA signer does not match mandate');
+    const signer=config.session?(await sessionFactory(config,m,async patch=>{Object.assign(receipt,patch);await save(state);})).account:config.aa?(await signerFactory(config)).account:privateKeyToAccount(config.privateKey);
+    if((config.aa||config.session)&&signer.address.toLowerCase()!==m.aaAddress?.toLowerCase())throw Error('AA signer does not match mandate');
     const client=new x402Client().register(NETWORK,new ExactEvmScheme(signer));
     const payment=await client.createPaymentPayload({...required,accepts:[q],extensions:undefined});
+    receipt.authorization=payment.payload.authorization;await save(state);
     const response=await fetcher(config.endpoint,{...options,signal:AbortSignal.timeout(20000),headers:{'PAYMENT-SIGNATURE':encodePaymentSignatureHeader(payment)}});
     receipt.httpStatus=response.status;
     const settlement=response.headers.get('PAYMENT-RESPONSE');
     if(settlement && settlement.length<20000) receipt.settlement=decodePaymentResponseHeader(settlement);
     receipt.result=await limitedText(response);
     receipt.status=response.ok && receipt.settlement?.success===true?'seller-reported-settled':'uncertain';
-    // Seller receipt is not independently verified onchain.
+    if(config.session&&receipt.settlement?.success===true){
+      try{receipt.proof=await settlementVerifier(config,receipt);receipt.status=response.ok?'chain-verified':'paid-response-failed';}
+      catch(e){receipt.status='pending-chain-verification';receipt.verificationError=e.message;}
+    }
   } catch(e) {receipt.status='uncertain';receipt.error=e.message;}
   await save(state);return receipt;
 }
