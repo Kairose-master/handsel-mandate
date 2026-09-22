@@ -5,6 +5,8 @@
 !demo/**
 !runtime/
 !runtime/**
+!extension/
+extension/*
 !extension/policy.js
 !public/
 !public/**
