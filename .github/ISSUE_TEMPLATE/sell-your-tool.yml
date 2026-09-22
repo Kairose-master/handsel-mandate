@@ -1,0 +1,60 @@
+name: 내 도구 판매 신청 (Sell your tool to agents)
+description: 바이브 코딩으로 만든 도구를 에이전트가 호출당 구매하도록 연결합니다. 개발자 프리뷰 · Base Sepolia 테스트넷.
+title: "[판매 신청] "
+labels: ["seller-preview"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        작동하는 API 하나면 충분합니다. **비밀키, 토큰, 고객 데이터는 절대 적지 마세요.** 공개 이슈입니다.
+        테스트넷에서 먼저 연결하고, 첫 외부 구매가 확인된 뒤 다음 단계를 정합니다. 구매자 유입이나 매출을 보장하지 않습니다.
+  - type: input
+    id: name
+    attributes:
+      label: 도구 이름
+      placeholder: "예: PDF 표 추출기"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: 어떤 문제를 해결하나요?
+      description: 누가 어떤 입력을 넣으면 어떤 결과를 받는지.
+    validations:
+      required: true
+  - type: input
+    id: endpoint
+    attributes:
+      label: HTTPS 엔드포인트
+      description: 쿼리·자격증명 없는 주소. 방식(GET/POST)도 적어주세요.
+      placeholder: "POST https://api.example.com/extract"
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: 호출 예제 (입력 JSON → 출력 JSON)
+      render: json
+    validations:
+      required: true
+  - type: input
+    id: price
+    attributes:
+      label: 호출당 가격 (USDC)
+      placeholder: "0.01"
+    validations:
+      required: true
+  - type: input
+    id: users
+    attributes:
+      label: 이미 쓰는 사람이 있나요?
+      description: 공개한 곳(링크), 사용법을 물어본 사람이 있는지. 선별 기준입니다.
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 확인
+      options:
+        - label: 테스트넷 개발자 프리뷰이며 매출·유입 보장이 없음을 이해합니다.
+          required: true
+        - label: 결제 게이트가 붙은 뒤, 프록시의 비밀 헤더가 없는 직접 호출은 제 API에서 거부하겠습니다.
+          required: true
