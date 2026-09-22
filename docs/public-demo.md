@@ -67,6 +67,8 @@ DEMO_AGENT_KEY=0xTestnetOnlyKey npm run demo
 
 ## Vercel 배포
 
+현재 배포: **https://handsel-mandate-demo.vercel.app** (Vercel 프로젝트 `handsel-mandate-demo`, `main` 푸시마다 자동 배포). 지금은 `DEMO_MODE=local`이라 서명만 검증하고 체인에는 기록하지 않습니다. 테스트넷으로 바꾸려면 Vercel 환경 변수에 `DEMO_MODE=testnet`, `SELLER_PAY_TO`, `DEMO_AGENT_KEY`(Base Sepolia USDC 소액)를 넣고 재배포하세요.
+
 저장소 루트가 그대로 Vercel 프로젝트입니다 (`api/index.js`가 모든 경로를 받고 `vercel.json`이 재작성). 환경 변수는 위와 같고, `PUBLIC_BASE_URL`을 비우면 프로덕션 도메인을 자동으로 씁니다. 서버리스라 구매 집계·데모 예산·로컬 모드의 nonce 기록은 인스턴스 메모리에만 있고 JSONL 원장은 꺼집니다. 집계가 필요하면 로그 드레인이나 외부 저장소를 붙이세요. 브라우저 버튼의 데모 에이전트는 같은 인스턴스에 루프백으로 접속해 구매하므로 배포 보호 설정과 무관하게 동작합니다.
 
 ## 검증 상태
