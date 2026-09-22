@@ -6,3 +6,4 @@ dist/
 *.zip
 runtime/*.local.*
 runtime/state.lock/
+demo/*.local.*

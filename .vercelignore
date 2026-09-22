@@ -1,0 +1,15 @@
+*
+!api/
+!api/**
+!demo/
+!demo/**
+!runtime/
+!runtime/**
+!extension/policy.js
+!public/
+!public/**
+!package.json
+!package-lock.json
+!vercel.json
+demo/*.local.*
+runtime/*.local.*
