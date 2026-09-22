@@ -12,5 +12,5 @@ fs.writeFileSync(launcher,`#!/bin/sh\nexec ${quote(process.execPath)} ${quote(pa
 fs.mkdirSync(dir,{recursive:true});
 const manifest=path.join(dir,'io.handsel.mandate.json');
 if(fs.existsSync(manifest))throw Error('Host manifest already exists; inspect it before replacing');
-fs.writeFileSync(manifest,JSON.stringify({name:'io.handsel.mandate',description:'Handsel testnet x402 signer',path:launcher,type:'stdio',allowed_origins:[`chrome-extension://${id}/`]},null,2),{mode:0o600});
+fs.writeFileSync(manifest,JSON.stringify({name:'io.handsel.mandate',description:'Handsel BlockFlow + ERC-4337 + x402 testnet host',path:launcher,type:'stdio',allowed_origins:[`chrome-extension://${id}/`]},null,2),{mode:0o600});
 console.log('Installed:',manifest);

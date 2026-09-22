@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bc="http://blockflow.dev/schema/bpmn/bc"
+                  id="Definitions_HandselMandate" targetNamespace="https://handsel.dev/mandate">
+  <bpmn:process id="HandselMandatePayment" name="Handsel agent payment mandate" isExecutable="true">
+    <bpmn:extensionElements>
+      <bc:variables>
+        <bc:variable name="quoteHash" type="bytes32"/>
+        <bc:variable name="receiptHash" type="bytes32"/>
+      </bc:variables>
+    </bpmn:extensionElements>
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Human" name="Human" bc:roleKey="Human">
+        <bpmn:flowNodeRef>Start_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Grant</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Agent" name="Agent" bc:roleKey="Agent">
+        <bpmn:flowNodeRef>Task_Authorize</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Auditor" name="Auditor" bc:roleKey="Auditor">
+        <bpmn:flowNodeRef>Task_Record</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_1</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_Grant" name="Grant mandate" bc:taskId="1" bc:fn="grantMandate">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_Authorize" name="Authorize x402 quote" bc:taskId="2" bc:fn="authorizeQuote">
+      <bpmn:extensionElements>
+        <bc:inputs><bc:input variable="quoteHash" label="x402 quote hash"/></bc:inputs>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_Record" name="Record settlement" bc:taskId="3" bc:fn="recordSettlement">
+      <bpmn:extensionElements>
+        <bc:inputs><bc:input variable="receiptHash" label="settlement receipt hash"/></bc:inputs>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_1" name="Complete">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_Grant"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Grant" targetRef="Task_Authorize"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Authorize" targetRef="Task_Record"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_Record" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>

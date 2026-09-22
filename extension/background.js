@@ -9,7 +9,7 @@ async function dispatch(msg,sender,external=false) {
   const {state={mandate:null,receipts:[],agentId:''}}=await chrome.storage.local.get('state');
   if (external && (!state.agentId || sender.id!==state.agentId)) throw Error('Agent extension is not paired');
   if (external && !['status','catalog','purchase','live.status','live.purchase'].includes(msg.type)) throw Error('Human-only operation');
-  if(msg.type.startsWith('live.')) {
+  if(msg.type.startsWith('live.')||msg.type==='aa.provision') {
     const response=await chrome.runtime.sendNativeMessage('io.handsel.mandate',msg);
     if(!response.ok)throw Error(response.error);
     return response.result;

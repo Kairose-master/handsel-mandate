@@ -3,6 +3,8 @@ import {decodePaymentRequiredHeader, encodePaymentSignatureHeader, decodePayment
 import {ExactEvmScheme} from '@x402/evm/exact/client';
 import {privateKeyToAccount} from 'viem/accounts';
 import {units} from '../extension/policy.js';
+import {createAASigner} from './aa.js';
+import {assertWorkflowBinding} from './blockflow.js';
 
 export const NETWORK='eip155:84532';
 export const ASSET='0x036cbd53842c5426634e7929541ec2318f3dcf7e';
@@ -23,7 +25,7 @@ export function validateQuote(required, config, mandate, now=Date.now()) {
 export function liveMandate(input,config,now=Date.now()) {
   const total=units(input.total),perCall=units(input.perCall),minutes=Number(input.minutes);
   if(total>1000000||perCall>total||!Number.isInteger(minutes)||minutes<1||minutes>60) throw Error('Testnet maximum: 1 USDC and 60 minutes');
-  return {id:crypto.randomUUID(),mode:'base-sepolia',endpoint:config.endpoint,payTo:config.payTo,total,perCall,reserved:0,expiresAt:now+minutes*60000,revoked:false};
+  return {id:crypto.randomUUID(),mode:'base-sepolia-aa',network:NETWORK,asset:ASSET,endpoint:config.endpoint,payTo:config.payTo,total,perCall,reserved:0,expiresAt:now+minutes*60000,revoked:false};
 }
 async function limitedText(response){
   const reader=response.body?.getReader();if(!reader)return '';
@@ -31,10 +33,11 @@ async function limitedText(response){
   for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>128000){await reader.cancel();throw Error('Response too large');}chunks.push(Buffer.from(value));}
   return Buffer.concat(chunks).toString('utf8');
 }
-export async function buy(config,state,request,save,{fetcher=fetch}={}) {
+export async function buy(config,state,request,save,{fetcher=fetch,verifyWorkflow=assertWorkflowBinding,signerFactory=createAASigner}={}) {
   if(!/^[\w-]{1,100}$/.test(request.requestId??'')) throw Error('Invalid request ID');
   const m=state.mandate;
   if(!m||request.mandateId!==m.id) throw Error('Stale mandate');
+  verifyWorkflow(m);
   const old=state.receipts.find(r=>r.requestId===request.requestId && r.mandateId===m.id);if(old)return old;
   if(m.revoked||Date.now()>=m.expiresAt)throw Error('Mandate inactive');
   const options={method:'GET',redirect:'error',signal:AbortSignal.timeout(20000)};
@@ -48,7 +51,8 @@ export async function buy(config,state,request,save,{fetcher=fetch}={}) {
   m.reserved+=receipt.amount;state.receipts.push(receipt);await save(state);
   // Reservations remain consumed after errors: a signed authorization might settle later.
   try {
-    const signer=privateKeyToAccount(config.privateKey);
+    const signer=config.aa?(await signerFactory(config)).account:privateKeyToAccount(config.privateKey);
+    if(config.aa&&signer.address.toLowerCase()!==m.aaAddress?.toLowerCase())throw Error('AA signer does not match mandate');
     const client=new x402Client().register(NETWORK,new ExactEvmScheme(signer));
     const payment=await client.createPaymentPayload({...required,accepts:[q],extensions:undefined});
     const response=await fetcher(config.endpoint,{...options,signal:AbortSignal.timeout(20000),headers:{'PAYMENT-SIGNATURE':encodePaymentSignatureHeader(payment)}});

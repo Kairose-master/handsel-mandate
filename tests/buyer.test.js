@@ -4,6 +4,7 @@ import {generatePrivateKey,privateKeyToAccount} from 'viem/accounts';
 import {recoverTypedDataAddress} from 'viem';
 import {buy,liveMandate,validateQuote,NETWORK,ASSET} from '../runtime/buyer.js';
 const config={endpoint:'https://seller.example/paid',payTo:'0x1111111111111111111111111111111111111111',privateKey:generatePrivateKey()};
+const testOptions=extra=>({verifyWorkflow:()=>true,...extra});
 const required=()=>({x402Version:2,resource:{url:config.endpoint},accepts:[{scheme:'exact',network:NETWORK,asset:ASSET,amount:'1000',payTo:config.payTo,maxTimeoutSeconds:60,extra:{name:'USDC',version:'2'}}]});
 const state=()=>({mandate:liveMandate({total:'0.01',perCall:'0.005',minutes:30},config),receipts:[]});
 test('testnet quote accepted',()=>assert.equal(validateQuote(required(),config,state().mandate).amount,'1000'));
@@ -21,9 +22,25 @@ test('real SDK produces verifiable EIP-3009 signature across 402 retry',async()=
   assert.equal(a.to.toLowerCase(),config.payTo);assert.equal(a.value,'1000');
   return new Response('{"answer":42}',{headers:{'PAYMENT-RESPONSE':Buffer.from(JSON.stringify({success:true,network:NETWORK,transaction:'fixture-not-onchain'})).toString('base64')}});
  };
- const r=await buy(config,s,{mandateId:s.mandate.id,requestId:'one'},async()=>{saves++;},{fetcher});
+ const r=await buy(config,s,{mandateId:s.mandate.id,requestId:'one'},async()=>{saves++;},testOptions({fetcher}));
  assert.equal(r.status,'seller-reported-settled');assert.equal(s.mandate.reserved,1000);
- await buy(config,s,{mandateId:s.mandate.id,requestId:'one'},async()=>{},{fetcher});assert.equal(calls,2);
+ await buy(config,s,{mandateId:s.mandate.id,requestId:'one'},async()=>{},testOptions({fetcher}));assert.equal(calls,2);
 });
-test('uncertain network failure retains budget reservation',async()=>{const s=state();let n=0;const r=await buy(config,s,{mandateId:s.mandate.id,requestId:'fail'},async()=>{},{fetcher:async()=>{if(n++)throw Error('Timeout');return new Response('',{status:402,headers:{'PAYMENT-REQUIRED':Buffer.from(JSON.stringify(required())).toString('base64')}});}});assert.equal(r.status,'uncertain');assert.equal(s.mandate.reserved,1000);});
-test('revoked mandate never makes request',async()=>{const s=state();s.mandate.revoked=true;await assert.rejects(()=>buy(config,s,{mandateId:s.mandate.id,requestId:'no'},async()=>{},{fetcher:()=>assert.fail('network called')}));});
+test('x402 payload uses the ERC-4337 account as payer',async()=>{
+ const aaAddress='0x3333333333333333333333333333333333333333';
+ const aaSigner={address:aaAddress,signTypedData:async()=>`0x${'11'.repeat(96)}`};
+ const aaConfig={...config,aa:{type:'coinbase-smart-account'}};
+ const s=state();s.mandate.aaAddress=aaAddress;
+ let calls=0;
+ const fetcher=async(_url,opts)=>{
+  if(calls++===0)return new Response('',{status:402,headers:{'PAYMENT-REQUIRED':Buffer.from(JSON.stringify(required())).toString('base64')}});
+  const payload=JSON.parse(Buffer.from(opts.headers['PAYMENT-SIGNATURE'],'base64').toString());
+  assert.equal(payload.payload.authorization.from.toLowerCase(),aaAddress.toLowerCase());
+  assert.ok(payload.payload.signature.length>132);
+  return new Response('ok',{headers:{'PAYMENT-RESPONSE':Buffer.from(JSON.stringify({success:true,network:NETWORK,transaction:'fixture'})).toString('base64')}});
+ };
+ const receipt=await buy(aaConfig,s,{mandateId:s.mandate.id,requestId:'aa-one'},async()=>{},testOptions({fetcher,signerFactory:async()=>({account:aaSigner})}));
+ assert.equal(receipt.status,'seller-reported-settled');
+});
+test('uncertain network failure retains budget reservation',async()=>{const s=state();let n=0;const r=await buy(config,s,{mandateId:s.mandate.id,requestId:'fail'},async()=>{},testOptions({fetcher:async()=>{if(n++)throw Error('Timeout');return new Response('',{status:402,headers:{'PAYMENT-REQUIRED':Buffer.from(JSON.stringify(required())).toString('base64')}});}}));assert.equal(r.status,'uncertain');assert.equal(s.mandate.reserved,1000);});
+test('revoked mandate never makes request',async()=>{const s=state();s.mandate.revoked=true;await assert.rejects(()=>buy(config,s,{mandateId:s.mandate.id,requestId:'no'},async()=>{},testOptions({fetcher:()=>assert.fail('network called')})));});

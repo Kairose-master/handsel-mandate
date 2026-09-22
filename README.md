@@ -2,7 +2,9 @@
 
 사람이 예산·허용 도구·만료를 지정하고 브라우저 에이전트가 그 범위 안에서 모의 구매하는 Chrome MV3 확장 초안입니다.
 
-**v0.2: 모의 모드 + Base Sepolia 실제 x402 서명 경로.** Native Host를 설치하면 전용 테스트넷 지갑으로 x402 v2 결제를 요청할 수 있습니다. 메인넷은 차단됩니다. AA·BlockFlow 컴파일·LLM은 아직 미구현입니다. 로컬 정책은 온체인 금융 보안 경계가 아닙니다. 설치와 검증 범위는 [실제 결제 설정](docs/live-payments.md)을 보세요.
+**v0.3: BlockFlow + ERC-4337 AA + Base Sepolia x402 경로.** Native Host는 고정된 BlockFlow 커밋으로 위임 BPMN을 IR/Solidity/Foundry 테스트까지 컴파일하고, 정책과 산출물 해시를 바인딩합니다. 배포된 Coinbase Smart Account가 EIP-1271 형식으로 x402 v2 결제에 서명합니다. 메인넷은 차단됩니다.
+
+현재 예산 집행자는 로컬 Native Host입니다. BlockFlow 컨트랙트는 아직 배포하지 않으며 Coinbase Smart Account에 제한된 session key 모듈을 설치하지도 않습니다. 따라서 이것은 **AA 결제 연결 프로토타입**이지 온체인 강제형 위임 완성본이 아닙니다. 전용 테스트넷 계정만 사용하세요. 설치와 검증 범위는 [실제 결제 설정](docs/live-payments.md)을 보세요.
 
 ## 설치
 
@@ -23,7 +25,7 @@
 
 ## 테스트
 
-Node 20+에서 `npm ci` 후 `npm test`. 실제 x402 SDK의 서명을 복구·검증하는 테스트를 포함합니다. Chrome 실제 설치 검증은 아래 체크리스트로 별도 수행합니다.
+Node 22+에서 `npm ci` 후 `npm test`. BlockFlow 통합 테스트까지 실행하려면 BlockFlow 저장소를 `../BlockFlow`에 clone하거나 `BLOCKFLOW_ROOT=/absolute/path/to/BlockFlow npm test`를 사용합니다. 테스트는 실제 BlockFlow 컴파일, Coinbase Smart Account의 EIP-1271 래핑 서명, x402 payload의 AA payer 주소를 확인합니다. Chrome/체인 실제 설치 검증은 아래 체크리스트로 별도 수행합니다.
 
 - [ ] 아이콘 클릭 → 사이드패널 열림
 - [ ] 생성 → 데모 구매 → 재시작 후 예산/영수증 유지
@@ -40,8 +42,12 @@ Node 20+에서 `npm ci` 후 `npm test`. 실제 x402 SDK의 서명을 복구·검
 - 내보낸 JSON은 **서명되지 않은 데모 기록**이며 법률상 위임장 또는 온체인 권한이 아닙니다.
 - 저장소의 코드/영수증은 공개되지 않고 확장 로컬 저장소에만 기록됩니다. 동기화/원격 분석 없음.
 
+## 통합 구조
+
+`위임 입력 → BlockFlow BPMN/IR/soundness/Solidity → 산출물+정책 바인딩 → ERC-4337 EIP-1271 signer → x402 EIP-3009 → 영수증` 순서입니다. BlockFlow 검증 실패, 컴파일러 커밋 불일치, 바인딩 변경, 미배포 AA 계정, EIP-1271 호환성 실패 중 하나라도 있으면 서명 전에 닫힙니다.
+
 ## 다음 단계
 
-`docs/integration.md`에 BlockFlow·x402·지갑 통합의 신뢰 경계와 검증 조건을 기록했습니다. 기존 Handsel 전체 코드를 가져오지 않고 구매 경로 하나부터 검증합니다.
+다음 보안 마일스톤은 BlockFlow가 생성한 정책을 스마트계정 validator/session-key 모듈로 내려 예산·수령인·만료를 온체인에서 강제하고, 영수증 트랜잭션을 RPC로 독립 검증하는 것입니다. 기존 Handsel 전체 코드를 가져오지 않고 구매 경로 하나부터 검증합니다.
 
 References: [Chrome Side Panel](https://developer.chrome.com/docs/extensions/reference/api/sidePanel), [Messaging](https://developer.chrome.com/docs/extensions/develop/concepts/messaging), [x402 Bazaar](https://docs.x402.org/extensions/bazaar).
