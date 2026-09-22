@@ -2,7 +2,7 @@
 
 사람이 예산·허용 도구·만료를 지정하고 브라우저 에이전트가 그 범위 안에서 모의 구매하는 Chrome MV3 확장 초안입니다.
 
-**Simulation only. No wallet, private keys, real payments, live x402, LLM, or BlockFlow compilation.** 로컬 상태는 개발자 도구로 바꿀 수 있으며 금융 보안 경계가 아닙니다.
+**v0.2: 모의 모드 + Base Sepolia 실제 x402 서명 경로.** Native Host를 설치하면 전용 테스트넷 지갑으로 x402 v2 결제를 요청할 수 있습니다. 메인넷은 차단됩니다. AA·BlockFlow 컴파일·LLM은 아직 미구현입니다. 로컬 정책은 온체인 금융 보안 경계가 아닙니다. 설치와 검증 범위는 [실제 결제 설정](docs/live-payments.md)을 보세요.
 
 ## 설치
 
@@ -23,7 +23,7 @@
 
 ## 테스트
 
-Node 20+에서 `npm test`. 설치할 npm 의존성이 없습니다. Chrome 실제 설치 검증은 아래 체크리스트로 별도 수행합니다.
+Node 20+에서 `npm ci` 후 `npm test`. 실제 x402 SDK의 서명을 복구·검증하는 테스트를 포함합니다. Chrome 실제 설치 검증은 아래 체크리스트로 별도 수행합니다.
 
 - [ ] 아이콘 클릭 → 사이드패널 열림
 - [ ] 생성 → 데모 구매 → 재시작 후 예산/영수증 유지

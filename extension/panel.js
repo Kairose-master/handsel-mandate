@@ -11,3 +11,8 @@ $('#export').onclick=()=>act(async()=>{const {mandate}=await send('status');if(!
 chrome.storage.onChanged.addListener(()=>render());
 setInterval(render,10000);
 render().catch(e=>$('#message').textContent=e.message);
+async function liveStatus(){const s=await send('live.status');$('#liveInfo').textContent=JSON.stringify(s,null,2);return s;}
+$('#liveStatus').onclick=()=>act(liveStatus);
+$('#liveCreate').onclick=()=>act(async()=>{const s=await liveStatus();const f=new FormData($('#mandate'));const input={total:f.get('total'),perCall:f.get('perCall'),minutes:f.get('minutes')};if(confirm(`Base Sepolia 테스트 USDC\n${s.endpoint}\n수령: ${s.payTo}\n총 ${input.total}, 건당 ${input.perCall}, ${input.minutes}분\n로컬 지출 정책이며 온체인 AA 위임은 아닙니다. 활성화할까요?`)){await send('live.create',{input});await liveStatus();}});
+$('#liveBuy').onclick=()=>act(async()=>{const s=await liveStatus();await send('live.purchase',{mandateId:s.mandate?.id,requestId:crypto.randomUUID()});await liveStatus();});
+$('#liveRevoke').onclick=()=>act(async()=>{await send('live.revoke');await liveStatus();});

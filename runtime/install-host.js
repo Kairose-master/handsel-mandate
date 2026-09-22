@@ -1,0 +1,16 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+const id=process.argv[2];if(!/^[a-p]{32}$/.test(id??''))throw Error('Usage: node runtime/install-host.js <Handsel extension ID>');
+const root=path.dirname(fileURLToPath(import.meta.url));
+if(!['darwin','linux'].includes(process.platform))throw Error('This installer supports macOS/Linux Chrome only');
+const dir=path.join(os.homedir(),process.platform==='darwin'?'Library/Application Support/Google/Chrome/NativeMessagingHosts':'.config/google-chrome/NativeMessagingHosts');
+const quote=s=>"'"+s.replaceAll("'","'\\''")+"'";
+const launcher=path.join(root,'launch.local.sh');
+fs.writeFileSync(launcher,`#!/bin/sh\nexec ${quote(process.execPath)} ${quote(path.join(root,'host.js'))}\n`,{mode:0o700});
+fs.mkdirSync(dir,{recursive:true});
+const manifest=path.join(dir,'io.handsel.mandate.json');
+if(fs.existsSync(manifest))throw Error('Host manifest already exists; inspect it before replacing');
+fs.writeFileSync(manifest,JSON.stringify({name:'io.handsel.mandate',description:'Handsel testnet x402 signer',path:launcher,type:'stdio',allowed_origins:[`chrome-extension://${id}/`]},null,2),{mode:0o600});
+console.log('Installed:',manifest);

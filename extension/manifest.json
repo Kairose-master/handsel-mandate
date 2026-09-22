@@ -1,1 +1,23 @@
-{"manifest_version":3,"name":"Handsel Mandate · Sandbox","version":"0.1.0","minimum_chrome_version":"116","description":"Human-controlled budgets for browser agents. Simulation only; no real payments.","permissions":["storage","sidePanel"],"background":{"service_worker":"background.js","type":"module"},"action":{"default_title":"Open Handsel"},"side_panel":{"default_path":"panel.html"},"options_page":"panel.html"}
+{
+  "manifest_version": 3,
+  "name": "Handsel Mandate · Sandbox",
+  "version": "0.2.0",
+  "minimum_chrome_version": "116",
+  "description": "Human-controlled agent budgets with a Base Sepolia x402 native signer.",
+  "permissions": [
+    "storage",
+    "sidePanel",
+    "nativeMessaging"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Open Handsel"
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "options_page": "panel.html"
+}
