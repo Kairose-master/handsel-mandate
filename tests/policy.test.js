@@ -1,0 +1,17 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {units,createMandate,purchase} from '../extension/policy.js';
+const fixture=()=>({mandate:createMandate({goal:'Research',total:'0.10',perCall:'0.05',minutes:30,services:['search','extract','premium']},1000),receipts:[]});
+const request=(s,id='one',serviceId='search')=>({mandateId:s.mandate.id,requestId:id,serviceId});
+test('decimal parsing is exact',()=>assert.equal(units('0.000001'),1));
+test('invalid values rejected',()=>{for(const n of ['-1','NaN','1e3','0','0.0000001','Infinity'])assert.throws(()=>units(n));});
+test('valid purchase and receipt',()=>{const s=fixture();purchase(s,request(s),1001);assert.equal(s.mandate.spent,30000);assert.equal(s.receipts.length,1);});
+test('idempotent retry does not double charge',()=>{const s=fixture();purchase(s,request(s),1001);purchase(s,request(s),1002);assert.equal(s.mandate.spent,30000);});
+test('idempotency conflict rejected',()=>{const s=fixture();purchase(s,request(s),1001);assert.throws(()=>purchase(s,request(s,'one','extract'),1002));});
+test('per-call cap enforced',()=>{const s=fixture();assert.throws(()=>purchase(s,request(s,'one','premium'),1001),/건당/);});
+test('total cap enforced',()=>{const s=fixture();for(let i=0;i<3;i++)purchase(s,request(s,String(i)),1001);assert.throws(()=>purchase(s,request(s,'four'),1001),/총예산/);assert.equal(s.mandate.spent,90000);});
+test('revocation blocks new spend',()=>{const s=fixture();s.mandate.revoked=true;assert.throws(()=>purchase(s,request(s),1001));});
+test('expiry boundary blocks spend',()=>{const s=fixture();assert.throws(()=>purchase(s,request(s),s.mandate.expiresAt));});
+test('unknown or disallowed service rejected',()=>{const s=fixture();assert.throws(()=>purchase(s,request(s,'one','unknown'),1001));s.mandate.services=['extract'];assert.throws(()=>purchase(s,request(s),1001));});
+test('stale mandate rejected',()=>{const s=fixture();assert.throws(()=>purchase(s,{...request(s),mandateId:'old'},1001));});
+test('invalid mandate rejected',()=>{assert.throws(()=>createMandate({goal:'',total:'1',perCall:'2',minutes:30,services:['search']}));});

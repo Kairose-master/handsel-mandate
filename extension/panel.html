@@ -1,0 +1,12 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Handsel Mandate</title><link rel="stylesheet" href="style.css"></head><body>
+<header><span class="brand">h / HANDSEL</span><span class="badge">SANDBOX</span><h1>Give your agent<br>a boundary.</h1><p>목표는 자유롭게. 지출은 정해진 범위 안에서.</p></header>
+<main><aside>시뮬레이션 전용 · 실제 자금, 지갑, x402 결제 연결 없음</aside>
+<section><h2>01 / 위임장</h2><form id="mandate">
+<label>작업 목표<textarea name="goal" required maxlength="2000">논문 세 편을 검색하고 핵심 내용을 비교해줘.</textarea></label>
+<div class="grid"><label>총예산 · 모의 USDC<input name="total" value="1.00" required inputmode="decimal"></label><label>건당 한도<input name="perCall" value="0.10" required inputmode="decimal"></label></div>
+<label>유효기간 · 분<input name="minutes" value="30" type="number" min="1" max="1440" required></label>
+<fieldset><legend>허용된 도구</legend><label><input type="checkbox" name="services" value="search" checked> 검색 · 0.03</label><label><input type="checkbox" name="services" value="extract" checked> 문서 추출 · 0.05</label><label><input type="checkbox" name="services" value="premium"> 고급 분석 · 0.30</label></fieldset>
+<p class="muted">목표 문장은 참고 정보입니다. 예산·만료·허용 도구만 로컬 정책으로 검사합니다. 새 위임장은 기존 위임장을 대체합니다.</p><button>조건 확인 후 모의 위임 활성화</button></form></section>
+<section><h2>02 / 실행 통제</h2><p id="balance">위임장 없음</p><div class="grid"><button id="run" type="button">데모 에이전트 실행</button><button id="revoke" class="danger" type="button">권한 회수</button></div><button id="export" class="secondary">위임장 JSON 내보내기</button></section>
+<section><h2>03 / 에이전트 연결</h2><p class="muted">호환 확장 프로그램 ID를 명시적으로 연결합니다. 일반 웹페이지와 내장 AI에 자동 접근 권한을 주지 않습니다.</p><label>Agent extension ID<input id="agentId" placeholder="32자 확장 프로그램 ID" maxlength="32"></label><button id="pair" class="secondary">연결 저장 / 기존 위임 회수</button></section>
+<p id="message" role="status" aria-live="polite"></p><section><h2>활동 영수증</h2><ol id="receipts"></ol></section></main><footer>Human intent. Bounded execution.</footer><script type="module" src="panel.js"></script></body></html>
