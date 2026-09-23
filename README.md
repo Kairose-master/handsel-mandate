@@ -1,35 +1,69 @@
-# 402-LAB — 에이전트가 발견하고 구매하는 API
+# 402-LAB — agent commerce prototype
 
-402-LAB은 바이브 코딩으로 만든 API를 에이전트가 발견하고 호출당 구매할 수 있게 연결하는 개발자 프리뷰입니다.
+## Public Demo · 테스트넷 구매 데모
 
-공개 데모: https://handsel-mandate-demo.vercel.app  
-판매 신청: https://github.com/Kairose-master/handsel-mandate/issues/new?template=sell-your-tool.yml  
-MCP 구매 흐름: [docs/mcp.md](docs/mcp.md)
+공식 x402 SDK 기반 공개 데모입니다. 확인 가능한 정산은 Base Sepolia 테스트넷입니다. 402-LAB MCP가 외부 판매자 GetBags의 API를 0.01 test USDC에 구매한 tx: [Base Sepolia](https://sepolia.basescan.org/tx/0xd02557b808ed70e8533e153bcfb132d3ead8c6e931cb13e43f1936359e6279df). 이 기록은 우리 에이전트가 외부 서비스를 구매한 증거이며, 외부 사용자가 402-LAB 상품을 구매했거나 메인넷 매출이 발생했다는 뜻은 아닙니다. 공개 데모: **https://handsel-mandate-demo.vercel.app**. 판매자 연결 및 테스트넷 모드 안내는 [docs/public-demo.md](docs/public-demo.md)를 참고하세요.
 
-현재 확인 가능한 결제 증거는 Base Sepolia 테스트넷의 내부 검증 및 MCP 구매입니다. x402 MCP 클라이언트가 외부 판매자 GetBags의 API를 0.01 test USDC로 구매한 기록: [Base Sepolia tx](https://sepolia.basescan.org/tx/0xd02557b808ed70e8533e153bcfb132d3ead8c6e931cb13e43f1936359e6279df). 이는 테스트넷에서 우리 에이전트가 외부 서비스를 구매한 증거이며, 외부 사용자가 402-LAB 상품을 구매했거나 메인넷 매출이 발생했다는 뜻은 아닙니다.
+## 402-LAB MCP · "1달러 안에서" 위임
 
-## 이번 주에 확인할 가설
-
-- 구매자: “1달러 안에서 필요한 결과를 찾아줘.” → 에이전트가 x402 상품을 찾아 예산 안에서 구매한다.
-- 판매자: 작동하는 API의 입력·출력 예시와 가격을 보내면 x402 판매 프록시 연결을 함께 시험한다.
-- 첫 상품: 한국 사업자 상태 조회 API. 최대 100개 사업자번호를 조회하는 호출은 0.02 USDC이며, NTS API 키와 이용 조건이 필요하다.
-
-디렉터리 노출·구매자 유입·매출은 아직 검증되지 않았습니다. 가격과 결과 품질이 맞는지도 파일럿으로 확인합니다. 
-
-## 402-LAB MCP · “1달러 안에서” 위임
-
-사람이 자연어로 예산을 위임하면 MCP 클라이언트가 x402 상품을 찾고, 설정된 예산과 판매자 정책 안에서 구매해 결과를 돌려줍니다. `npm run mcp`(stdio) 또는 `npm run mcp:http`(확장용). [설치 및 한계](docs/mcp.md).
+사람이 자연어로 예산을 위임하면 MCP 클라이언트(크롬 확장·Aside·Claude Desktop·Cursor)가 `discover`로 x402 상품을 찾고 `buy`로 예산 안에서만 결제해 결과만 돌려줍니다. 서버가 상한·건당 한도·네트워크·판매자 허용 목록을 강제하고 예약은 서명 전에 기록됩니다. `npm run mcp`(stdio) 또는 `npm run mcp:http`(확장용). [docs/mcp.md](docs/mcp.md).
 
 ## Seller Studio · 판매자용 초안
 
-바이브 코딩으로 만든 도구의 설명·호출 예제·가격을 정리하고 x402 연동 설정을 내보내는 로컬 스튜디오입니다. 실제 API 호출·결제·Bazaar 등록·공개 판매는 수행하지 않습니다. [범위와 다음 단계](docs/seller-studio.md).
+바이브 코딩으로 만든 도구의 상품 설명·호출 예제·가격을 정리하고, x402 연동 설정을 내보내는 로컬 스튜디오를 추가했습니다. `node scripts/seller-studio.js` 실행 후 `http://127.0.0.1:4173`을 여세요. 의존성 설치 없이 실행됩니다. 상품 미리보기·예산 제한 모의 구매·JSON 다운로드를 지원합니다. 실제 API 호출·결제·Bazaar 등록·공개 판매는 수행하지 않습니다. [범위와 다음 연동 단계](docs/seller-studio.md).
 
-## 제품 경계
+사람이 예산·허용 도구·만료를 지정하고 브라우저 에이전트가 그 범위 안에서 모의 구매하는 Chrome MV3 확장 초안입니다.
 
-- 데모의 일반 USDC 결제 모드와 테스트넷 증거는 구분합니다. 현재 메인넷 정산 또는 외부 고객 구매를 확인한 기록은 없습니다.
-- 가격·예산 정책은 데모 구현의 범위에서만 강제됩니다. 결과 품질, 환불, 구매자 유입은 보장하지 않습니다.
-- MCP 도구는 결제 전에 예산과 허용 정책을 검사합니다. 브라우저 제품과의 자동 연결은 각 제품의 어댑터 지원이 필요합니다.
+**v0.4: 온체인 제한 권한 + BlockFlow + x402.** Coinbase Smart Account에 `MandateValidator`를 컨트랙트 소유자로 설치합니다. 사람이 승인한 총예산·건당 한도·수령인·만료·에이전트·BlockFlow 바인딩을 체인에 기록하고, 에이전트가 결제 금액을 먼저 예약한 경우에만 해당 EIP-3009 결제를 허용합니다. 메인넷은 차단됩니다.
 
-## 개발
+새 Session 모드에는 소유자 키가 없으며 에이전트는 임의 전송·새 위임 발급을 할 수 없습니다. 회수가 체인에 확정되면 미결제 예약도 무효화됩니다. 영수증은 RPC의 USDC Transfer + AuthorizationUsed nonce와 대조합니다. 실제 Base Sepolia 배포·정산은 아직 실행하지 않았습니다. [설치·검증 범위](docs/session-payments.md)를 확인하세요. 이전 full-owner 모드는 기존 설정에서만 남아 있으며 동일한 보안 보장을 제공하지 않습니다.
 
-Node 22+에서 `npm ci` 후 `npm test`. 공개 데모 설정과 판매자 연동은 [docs/public-demo.md](docs/public-demo.md)를 참고하세요.
+x402 서명은 예산 예약 전에 [DAMBI 호환 사전 정책 게이트](docs/dambi-integration.md)를 통과해야 합니다. 에이전트 실행에서는 `allow / evaluated / enforcing` 판정만 허용합니다.
+
+## 설치
+
+1. 이 저장소를 clone 또는 Download ZIP으로 받습니다.
+2. Chrome `chrome://extensions` → 개발자 모드 → 압축해제된 확장 프로그램 로드 → `extension/` 선택.
+3. 도구 모음의 Handsel 아이콘을 누르면 사이드패널이 열립니다. 확장 옵션에서도 같은 화면을 열 수 있습니다.
+4. 위임장의 목표·총예산·건당 한도·기간·허용 도구를 확인하고 활성화합니다.
+5. 데모 에이전트 실행: 검색 0.03 + 문서 추출 0.05 모의 USDC를 사용하고 영수증을 남깁니다.
+6. 총예산 0.05, 건당 0.05로 설정하면 검색 후 추출이 차단됩니다. 첫 호출은 남으며 작업 전체가 원자적이지 않습니다.
+
+## 별도 에이전트 확장 연결
+
+`examples/agent-extension/`도 압축해제 로드합니다. 그 확장 ID를 Handsel 연결란에 저장한 뒤 새 위임장을 활성화하세요. 데모 확장 팝업에 Handsel 확장 ID를 입력하면 extension-to-extension 메시지로 구매를 요청합니다.
+
+지원 API: `status`, `catalog`, `purchase` (`mandateId`, `requestId`, `serviceId`). 응답은 `{ok,result}` 또는 `{ok:false,error}`입니다. 연결된 확장 하나만 접근 가능합니다. 연결 변경은 기존 위임을 회수합니다. 외부 에이전트는 위임 생성·연결 변경·권한 확대를 할 수 없습니다.
+
+브라우저 내장 AI나 Aside류 제품에 자동 연결되는 것은 아닙니다. 해당 제품이 확장 메시지/API 연결을 지원해야 어댑터를 붙일 수 있습니다. 일반 웹페이지에 지출 API를 공개하지 않습니다.
+
+## 테스트
+
+Node 22+에서 `npm ci` 후 `npm test`. BlockFlow 통합 테스트까지 실행하려면 BlockFlow 저장소를 `../BlockFlow`에 clone하거나 `BLOCKFLOW_ROOT=/absolute/path/to/BlockFlow npm test`를 사용합니다. 테스트는 실제 BlockFlow 컴파일, Coinbase Smart Account의 EIP-1271 래핑 서명, x402 payload의 AA payer 주소를 확인합니다. Chrome/체인 실제 설치 검증은 아래 체크리스트로 별도 수행합니다.
+
+- [ ] 아이콘 클릭 → 사이드패널 열림
+- [ ] 생성 → 데모 구매 → 재시작 후 예산/영수증 유지
+- [ ] 만료/회수/건당/총예산 초과 차단
+- [ ] 연결되지 않은 데모 확장 호출 거절
+- [ ] 연결 후 데모 확장 호출 성공
+- [ ] 두 패널 동시 호출에도 총예산 초과 없음
+
+## 구현 경계
+
+- 정수 micro-USDC로 금액 계산, service worker의 직렬 큐로 상태 갱신, request ID로 중복 차감 방지.
+- 서비스 가격은 고정 로컬 카탈로그에서 읽습니다. 외부 요청이 가격을 지정할 수 없습니다.
+- 목표의 의미나 API 품질은 검증하지 않습니다. 자연어를 금융 권한으로 자동 컴파일하지 않습니다.
+- 내보낸 JSON은 **서명되지 않은 데모 기록**이며 법률상 위임장 또는 온체인 권한이 아닙니다.
+- 저장소의 코드/영수증은 공개되지 않고 확장 로컬 저장소에만 기록됩니다. 동기화/원격 분석 없음.
+
+## 통합 구조
+
+`위임 입력 → BlockFlow 검증·산출물 바인딩 → 사람이 온체인 grant → 에이전트 reserve → EIP-1271 x402 결제 → RPC 영수증 대조` 순서입니다. 컴파일러 커밋·작업트리·정책·컨트랙트 바이트코드·소유자 슬롯을 검사하고 불일치하면 차단합니다.
+
+BlockFlow는 워크플로 구조를 검증합니다. 예산 제약은 별도로 작성한 `MandateValidator`가 집행하며, BlockFlow가 임의 BPMN 전체를 지출 모듈로 자동 변환하는 것은 아닙니다. endpoint와 자연어 목표는 온체인 결제 의미로 강제되지 않습니다.
+
+## 다음 단계
+
+남은 검증은 실제 Base Sepolia USDC와 facilitator를 이용한 배포·정산, 별도 보안 검토, 사람 지갑 승인 UI입니다. 현재 승인은 로컬 human-only CLI이고 구매마다 예약 가스가 발생합니다. 임의 UserOperation에 대한 session 권한이나 범용 ERC-7579 모듈을 주장하지 않습니다.
+
+References: [Chrome Side Panel](https://developer.chrome.com/docs/extensions/reference/api/sidePanel), [Messaging](https://developer.chrome.com/docs/extensions/develop/concepts/messaging), [x402 Bazaar](https://docs.x402.org/extensions/bazaar).
