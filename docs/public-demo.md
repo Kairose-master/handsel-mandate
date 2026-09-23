@@ -6,7 +6,8 @@
 
 | 파일 | 역할 |
 |---|---|
-| `demo/tool.js` | 기본 판매 도구: Markdown 표 → JSON 변환기 (의존성 없음) |
+| `demo/tools/nts.js` | **판매 상품: 사업자등록 상태 조회 (국세청).** 공공데이터포털 국세청 API(이용허락범위 제한 없음)를 중계. `NTS_SERVICE_KEY`가 있으면 자동 선택 |
+| `demo/tool.js` | 키가 없을 때의 대체 도구: Markdown 표 → JSON 변환기 |
 | `demo/upstream.js` | **판매자용 x402 프록시.** 판매자의 기존 API 앞에 결제 게이트를 세우고, 결제된 호출만 공유 비밀 헤더와 함께 전달합니다. Seller Studio 내보내기 파일을 그대로 읽습니다 |
 | `demo/config.js` | 환경 변수 파싱 (`node demo/server.js`와 Vercel 핸들러 공용) |
 | `api/index.js` · `vercel.json` | Vercel 배포용 핸들러와 라우팅 |
@@ -47,6 +48,12 @@ PORT=4402 npm run demo
 - 배포: 상태 없는 Node 22 프로세스 하나입니다. Render·Fly·Railway 등 어느 Node 호스트든 위 환경 변수와 `node demo/server.js`면 됩니다. 원장을 남기려면 영속 볼륨 또는 외부 로그 수집을 붙이세요.
 
 내 에이전트로 직접 구매: `SELLER_PAY_TO`, `DEMO_AGENT_KEY`, `DEMO_ENDPOINT=https://.../convert/sample`을 지정하고 `npm run demo:buy`. 다른 x402 v2 클라이언트도 `curl -i .../convert/sample`로 402를 받은 뒤 그대로 결제할 수 있습니다.
+
+## 우리 상품: 사업자등록 상태 조회 (국세청)
+
+`POST /biz/status` 본문 `{"b_no": ["1248100998", ...]}`(최대 100건, 하이픈 허용) → 국세청 기준 사업자 상태(계속·휴업·폐업), 과세유형, 폐업일. `GET /biz/status/sample`은 예제 번호 1건. 서버가 공공데이터포털 인증키 `NTS_SERVICE_KEY`를 들고 `api.odcloud.kr/api/nts-businessman/v1/status`를 호출하며, 키는 응답·product.json·로그 어디에도 나가지 않습니다. 국세청 응답이 OK가 아니면 검증된 결제를 취소하고 502를 돌려줍니다. 입력(사업자번호)은 로그에 남기지 않습니다.
+
+키 발급: https://www.data.go.kr/data/15081808/openapi.do 에서 활용신청(자동승인) → 마이페이지에서 일반 인증키(Decoding) 복사 → Vercel `NTS_SERVICE_KEY`에 저장 후 재배포. 활용 목적에는 "유료 API 중계 서비스"라고 사실대로 적고, 트래픽이 늘면 활용사례를 등록해 증량을 신청합니다. 한도는 1회 100건, 하루 100만 건입니다. 상품 설명에 출처(국세청)를 표기합니다.
 
 ## 판매자: 내 API 앞에 결제 게이트 세우기
 
