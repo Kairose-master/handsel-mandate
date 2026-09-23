@@ -2,18 +2,18 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>에이전트 구매 데모 · Base Sepolia 테스트넷</title>
+  <title>에이전트 구매 데모</title>
   <link rel="stylesheet" href="./page.css">
 </head>
 <body>
-<div class="testnet" role="status">⚠ TESTNET · Base Sepolia (eip155:84532) · 테스트용 USDC만 사용됩니다. 실제 돈이 오가지 않습니다.</div>
+<div class="testnet" id="network-banner" role="status">결제망 정보를 불러오는 중…</div>
 <header><a href="./">BlockFlow<span> / DEMO</span></a><span class="badge" id="mode-badge">불러오는 중…</span></header>
 <main>
   <section class="intro">
     <p class="eyebrow">VIBE-CODED? AGENTS WILL PAY PER CALL.</p>
     <h1>바이브 코딩으로 만든 제품,<br>에이전트가 사서 쓰게 만들어드립니다.</h1>
     <p>작동하는 API 주소 하나만 보내주세요. 결제 게이트, 에이전트가 읽는 상품 설명, 구매 링크를 붙여 드립니다. 아래는 저희가 만든 도구 하나로 그 흐름을 끝까지 돌린 것입니다. 버튼을 누르면 데모 에이전트가 상품을 발견하고, 허용 예산을 확인하고, 테스트넷 USDC를 결제하고, 결과를 받습니다.</p>
-    <p class="cta-row"><a class="button-link" href="#sell">내 도구 판매 신청 →</a><span class="hint">개발자 프리뷰 · 테스트넷 · 구매자 유입이나 매출을 보장하지 않습니다</span></p>
+    <p class="cta-row"><a class="button-link" href="#sell">내 도구 판매 신청 →</a><span class="hint" id="launch-hint">개발자 프리뷰 · 결제망을 불러오는 중…</span></p>
   </section>
   <div class="grid">
     <div>
@@ -21,7 +21,7 @@
         <p class="eyebrow">01 / 판매 중인 도구</p>
         <h2 id="product-name">…</h2>
         <p id="product-description"></p>
-        <div class="price"><strong id="product-price">…</strong><span> USDC / 호출 · 테스트넷</span></div>
+        <div class="price"><strong id="product-price">…</strong><span id="price-label"> USDC / 호출</span></div>
         <dl class="kv"><dt>유료 엔드포인트</dt><dd class="mono" id="product-endpoint"></dd><dt>판매자 수취 주소</dt><dd class="mono" id="product-payto"></dd><dt>상품 설명 파일</dt><dd class="mono"><a href="./product.json">product.json</a></dd></dl>
       </section>
       <section class="stack">
@@ -43,7 +43,7 @@
           <li data-step="discover"><span class="dot">1</span><div><div class="step-title">상품 발견</div><div class="step-detail">product.json과 유료 엔드포인트를 읽습니다.</div></div></li>
           <li data-step="quote"><span class="dot">2</span><div><div class="step-title">402 견적 수신</div><div class="step-detail">PAYMENT-REQUIRED 헤더에서 가격·네트워크·수취 주소를 읽습니다.</div></div></li>
           <li data-step="budget"><span class="dot">3</span><div><div class="step-title">허용 예산 확인</div><div class="step-detail">건당 한도와 남은 총예산 안에 있어야 서명합니다.</div></div></li>
-          <li data-step="pay"><span class="dot">4</span><div><div class="step-title">테스트넷 결제</div><div class="step-detail">EIP-3009 서명을 PAYMENT-SIGNATURE로 보내고 응답을 받습니다.</div></div></li>
+          <li data-step="pay"><span class="dot">4</span><div><div class="step-title" id="payment-step-title">테스트넷 결제</div><div class="step-detail">EIP-3009 서명을 PAYMENT-SIGNATURE로 보내고 응답을 받습니다.</div></div></li>
           <li data-step="result"><span class="dot">5</span><div><div class="step-title">결과 수령</div><div class="step-detail">변환된 JSON과 정산 정보를 확인합니다.</div></div></li>
         </ol>
         <pre id="result" hidden></pre>
@@ -65,11 +65,11 @@
       <li><strong>구매 링크를 받습니다.</strong> 위와 같은 페이지, 에이전트가 읽는 product.json, 402 → 서명 → 결과 한 줄 예제. 기존 소개 글과 문서에 붙이면 됩니다.</li>
     </ol>
     <p><a class="button-link" href="https://github.com/Kairose-master/handsel-mandate/issues/new?template=sell-your-tool.yml">판매 신청서 작성 (GitHub)</a></p>
-    <p class="hint">지금은 개발자 프리뷰입니다. Base Sepolia 테스트넷에서 먼저 연결하고, 첫 외부 구매가 확인된 뒤에 다음 단계를 정합니다. 메인넷·환불·에스크로·자동 고객 유입은 없습니다.</p>
+    <p class="hint" id="seller-pilot-hint">지금은 개발자 프리뷰입니다. 구매자 유입은 보장하지 않습니다.</p>
   </section>
   <footer>
-    <p><strong>범위</strong> · 이 데모는 도구 하나의 x402 구매를 테스트넷에서 끝까지 연결한 것입니다. 데모 에이전트는 서버가 보관한 테스트넷 전용 키를 쓰는 EOA이며, Handsel의 온체인 위임(스마트 계정·MandateValidator) 경로는 사용하지 않습니다.</p>
-    <p>메인넷 결제, 환불, 에스크로, Bazaar 등록, 판매자 로그인은 아직 없습니다. 판매 성과나 구매자 유입을 보장하지 않습니다.</p>
+    <p id="scope-copy"><strong>범위</strong> · x402 도구 구매 데모입니다. 테스트넷과 로컬 시뮬레이션은 실제 자금이 오가지 않습니다.</p>
+    <p id="risk-copy">판매 성과나 구매자 유입을 보장하지 않습니다. 메인넷 모드에서는 실제 USDC 결제가 발생할 수 있습니다.</p>
   </footer>
 </main>
 <script type="module" src="./page.js"></script>

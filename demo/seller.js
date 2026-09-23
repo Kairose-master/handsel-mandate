@@ -4,37 +4,42 @@
 import { createServer } from 'node:http';
 import { appendFile, readFile } from 'node:fs/promises';
 import { x402ResourceServer, x402HTTPResourceServer, HTTPFacilitatorClient } from '@x402/core/server';
+import { createCdpFacilitatorClient } from '@coinbase/cdp-sdk/x402';
 import { declareDiscoveryExtension } from '@x402/extensions/bazaar';
 import { ExactEvmScheme } from '@x402/evm/exact/server';
 import { builtinTool } from './upstream.js';
 import { LocalSimulationFacilitator, NETWORK } from './facilitator-local.js';
 import { createDemoAgent } from './agent.js';
 import { createPublicClient, http, parseAbi } from 'viem';
-import { baseSepolia } from 'viem/chains';
+import { base, baseSepolia } from 'viem/chains';
 
-const USDC = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
+const TESTNET_USDC = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
+const MAINNET_USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 const FAUCET = 'https://faucet.circle.com';
-export function usdcBalanceReader(rpcUrl = 'https://sepolia.base.org') {
-  const client = createPublicClient({ chain: baseSepolia, transport: http(rpcUrl, { timeout: 10000, retryCount: 1 }) });
-  return address => client.readContract({ address: USDC, abi: parseAbi(['function balanceOf(address) view returns (uint256)']), functionName: 'balanceOf', args: [address] });
+const MAINNET_NETWORK = 'eip155:8453';
+const BASESCAN = { testnet: 'https://sepolia.basescan.org/tx/', mainnet: 'https://basescan.org/tx/' };
+export function usdcBalanceReader(rpcUrl = 'https://sepolia.base.org', mode = 'testnet') {
+  const chain = mode === 'mainnet' ? base : baseSepolia;
+  const token = mode === 'mainnet' ? MAINNET_USDC : TESTNET_USDC;
+  const client = createPublicClient({ chain, transport: http(rpcUrl, { timeout: 10000, retryCount: 1 }) });
+  return address => client.readContract({ address: token, abi: parseAbi(['function balanceOf(address) view returns (uint256)']), functionName: 'balanceOf', args: [address] });
 }
 
 const PAGE_FILES = new Map([['/', ['page.html', 'text/html']], ['/page.js', ['page.js', 'text/javascript']], ['/page.css', ['page.css', 'text/css']]]);
-const BASESCAN = 'https://sepolia.basescan.org/tx/';
 const same = (a, b) => typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
 
-export function productFor({ publicBaseUrl, price, payTo, mode, tool }) {
+export function productFor({ publicBaseUrl, price, payTo, mode, tool, network = mode === 'mainnet' ? MAINNET_NETWORK : NETWORK }) {
   const main = `${publicBaseUrl}${tool.path}`;
   return {
-    format: 'blockflow.product.v1', status: mode === 'testnet' ? 'testnet-preview' : 'local-simulation',
-    name: tool.name, description: tool.description, network: NETWORK, currency: 'USDC', testnet: true, price, payTo,
+    format: 'blockflow.product.v1', status: mode === 'mainnet' ? 'production' : mode === 'testnet' ? 'testnet-preview' : 'local-simulation',
+    name: tool.name, description: tool.description, network, currency: 'USDC', testnet: mode !== 'mainnet', price, payTo,
     endpoints: [
       { method: 'GET', url: `${main}/sample`, description: tool.builtin ? '번들된 샘플 문서를 변환합니다. 입력이 없어 GET 전용 x402 클라이언트도 구매할 수 있습니다.' : '판매자가 등록한 예제 입력으로 도구를 호출합니다. 입력이 없어 GET 전용 x402 클라이언트도 구매할 수 있습니다.' },
       { method: tool.method, url: main, description: tool.method === 'POST' ? 'JSON 본문을 도구에 전달합니다.' : '도구를 호출합니다.', request: tool.exampleRequest ?? undefined },
     ],
     exampleResponse: tool.exampleResponse ?? undefined,
-    howToBuy: ['GET/POST 요청 → HTTP 402와 PAYMENT-REQUIRED 헤더(x402 v2, exact, eip155:84532 USDC)를 받습니다.', '요청한 금액의 EIP-3009 TransferWithAuthorization을 서명해 PAYMENT-SIGNATURE 헤더로 재요청합니다.', '200 응답 본문이 도구 결과, PAYMENT-RESPONSE 헤더가 정산 정보입니다.'],
-    verification: { onchainSettlement: mode === 'testnet', bazaarIndexed: false, proxiedUpstream: !tool.builtin },
+    howToBuy: [`GET/POST 요청 → HTTP 402와 PAYMENT-REQUIRED 헤더(x402 v2, exact, ${network} USDC)를 받습니다.`, '요청한 금액의 EIP-3009 TransferWithAuthorization을 서명해 PAYMENT-SIGNATURE 헤더로 재요청합니다.', '200 응답 본문이 도구 결과, PAYMENT-RESPONSE 헤더가 정산 정보입니다.'],
+    verification: { onchainSettlement: mode === 'testnet' || mode === 'mainnet', bazaarIndexed: false, proxiedUpstream: !tool.builtin },
   };
 }
 
@@ -64,24 +69,28 @@ function bazaarDiscovery(method, tool) {
 export function createDemoServer(options = {}) {
   const mode = options.mode ?? 'local';
   const tool = options.tool ?? builtinTool();
-  if (!['local', 'testnet'].includes(mode)) throw new Error('mode must be local or testnet');
+  if (!['local', 'testnet', 'mainnet'].includes(mode)) throw new Error('mode must be local, testnet or mainnet');
+  const network = mode === 'mainnet' ? MAINNET_NETWORK : NETWORK;
+  const asset = mode === 'mainnet' ? MAINNET_USDC : TESTNET_USDC;
+  if (mode === 'mainnet' && options.agentKey) throw new Error('DEMO_AGENT_KEY is disabled in mainnet mode; browser-triggered real spending is not allowed');
+  if (mode === 'mainnet' && !options.facilitator && (!process.env.CDP_API_KEY_ID || !process.env.CDP_API_KEY_SECRET)) throw new Error('Mainnet mode requires CDP_API_KEY_ID and CDP_API_KEY_SECRET');
   const price = options.price ?? '0.01';
   if (!/^(0|[1-9]\d{0,5})(\.\d{1,6})?$/.test(price) || Number(price) <= 0) throw new Error('price must be a positive USDC amount with at most six decimals');
   const payTo = options.payTo;
   if (!/^0x[0-9a-fA-F]{40}$/.test(payTo ?? '') || /^0x0{40}$/i.test(payTo)) throw new Error('SELLER_PAY_TO must be a non-zero EVM address');
   const publicBaseUrl = String(options.publicBaseUrl ?? '').replace(/\/+$/, '');
   if (!/^https?:\/\//.test(publicBaseUrl)) throw new Error('PUBLIC_BASE_URL is required (the URL buyers will see in the 402 quote)');
-  if (mode === 'testnet' && !publicBaseUrl.startsWith('https://')) throw new Error('testnet mode requires an https PUBLIC_BASE_URL');
-  const facilitator = options.facilitator ?? (mode === 'local' ? new LocalSimulationFacilitator() : new HTTPFacilitatorClient({ url: options.facilitatorUrl }));
+  if (mode !== 'local' && !publicBaseUrl.startsWith('https://')) throw new Error(`${mode} mode requires an https PUBLIC_BASE_URL`);
+  const facilitator = options.facilitator ?? (mode === 'local' ? new LocalSimulationFacilitator() : mode === 'mainnet' ? createCdpFacilitatorClient() : new HTTPFacilitatorClient({ url: options.facilitatorUrl }));
   const internalPayers = new Set((options.internalPayers ?? []).map(a => a.toLowerCase()));
   const ledgerPath = options.ledgerPath ?? null;
   const ledger = { external: 0, internal: 0, entries: [] };
-  const agent = options.agentKey ? createDemoAgent({ endpoint: `${publicBaseUrl}${tool.path}/sample`, payTo, privateKey: options.agentKey, total: options.demoTotal ?? '0.10', perCall: price }) : null;
+  const agent = options.agentKey && mode !== 'mainnet' ? createDemoAgent({ endpoint: `${publicBaseUrl}${tool.path}/sample`, payTo, privateKey: options.agentKey, total: options.demoTotal ?? '0.10', perCall: price }) : null;
   if (agent) internalPayers.add(agent.address.toLowerCase());
   const runs = { inFlight: false, times: [], perHour: options.demoRunsPerHour ?? 20 };
   // In testnet mode the demo button is gated on the agent wallet's real USDC balance,
   // so an unfunded deployment explains itself instead of burning budget on failed pays.
-  const readBalance = mode === 'testnet' ? (options.balanceReader ?? usdcBalanceReader(options.rpcUrl)) : null;
+  const readBalance = mode === 'testnet' ? (options.balanceReader ?? usdcBalanceReader(options.rpcUrl, mode)) : null;
   const priceMicro = BigInt(Math.round(Number(price) * 1e6));
   let balanceCache = { at: 0, value: null, error: null };
   async function agentFunding() {
@@ -91,17 +100,17 @@ export function createDemoServer(options = {}) {
       catch (error) { balanceCache = { at: Date.now(), value: null, error: error.message }; }
     }
     const v = balanceCache.value;
-    return { usdcBalance: v === null ? null : (Number(v) / 1e6).toFixed(6).replace(/\.?0+$/, ''), funded: v === null ? null : v >= priceMicro, address: agent.address, faucet: FAUCET, network: NETWORK, error: balanceCache.error };
+    return { usdcBalance: v === null ? null : (Number(v) / 1e6).toFixed(6).replace(/\.?0+$/, ''), funded: v === null ? null : v >= priceMicro, address: agent.address, faucet: FAUCET, network, error: balanceCache.error };
   }
   const log = options.log ?? (() => {});
 
-  const accepts = { scheme: 'exact', network: NETWORK, price: `$${price}`, payTo, maxTimeoutSeconds: 60 };
+  const accepts = { scheme: 'exact', network, asset, price: `$${price}`, payTo, maxTimeoutSeconds: 60 };
   const routes = {
     [`GET ${tool.path}/sample`]: { accepts, resource: `${publicBaseUrl}${tool.path}/sample`, description: `${tool.name} (sample input)`, mimeType: 'application/json', extensions: bazaarDiscovery('GET', tool) },
     [`${tool.method} ${tool.path}`]: { accepts, resource: `${publicBaseUrl}${tool.path}`, description: tool.name, mimeType: 'application/json', extensions: bazaarDiscovery(tool.method, tool) },
   };
-  const paid = new x402HTTPResourceServer(new x402ResourceServer(facilitator).register(NETWORK, new ExactEvmScheme()), routes);
-  const product = productFor({ publicBaseUrl, price, payTo, mode, tool });
+  const paid = new x402HTTPResourceServer(new x402ResourceServer(facilitator).register(network, new ExactEvmScheme()), routes);
+  const product = productFor({ publicBaseUrl, price, payTo, mode, tool, network });
 
   async function record(entry) {
     const internal = internalPayers.has(String(entry.payer ?? '').toLowerCase());
@@ -154,7 +163,7 @@ export function createDemoServer(options = {}) {
     try {
       const run = await agent.purchase({ fetcher: options.agentFetcher ?? fetch });
       const tx = run.receipt?.settlement?.transaction;
-      send(res, 200, { mode, testnet: true, ...run, explorer: mode === 'testnet' && /^0x[0-9a-fA-F]{64}$/.test(tx ?? '') ? `${BASESCAN}${tx}` : null });
+      send(res, 200, { mode, testnet: mode !== 'mainnet', ...run, explorer: mode === 'testnet' && /^0x[0-9a-fA-F]{64}$/.test(tx ?? '') ? `${BASESCAN.testnet}${tx}` : null });
     } catch (error) { send(res, 500, { error: error.message }); }
     finally { runs.inFlight = false; }
   }
@@ -167,8 +176,8 @@ export function createDemoServer(options = {}) {
       if (method === 'GET' && url.pathname === `${tool.path}/sample`) return await handlePaid(req, res, url, ctx => tool.runSample(ctx));
       if (method === tool.method && url.pathname === tool.path) return await handlePaid(req, res, url, ctx => tool.run(req, ctx));
       if (method === 'GET' && url.pathname === '/product.json') return send(res, 200, product, { 'Access-Control-Allow-Origin': '*' });
-      if (method === 'GET' && url.pathname === '/health') return send(res, 200, { ok: true, mode, network: NETWORK, testnet: true });
-      if (method === 'GET' && url.pathname === '/demo/status') return send(res, 200, { mode, testnet: true, network: NETWORK, product: { name: product.name, description: product.description, price, payTo, endpoint: `${publicBaseUrl}${tool.path}/sample`, mainEndpoint: `${tool.method} ${publicBaseUrl}${tool.path}`, proxiedUpstream: !tool.builtin }, agent: agent ? { address: agent.address, budget: agent.budget(), funding: await agentFunding() } : null, purchases: { external: ledger.external, internal: ledger.internal, note: '서버 데모 에이전트와 등록된 내부 주소의 구매는 internal로 따로 셉니다.' }, recent: ledger.entries.slice(-10).map(e => ({ at: e.at, route: e.route, amount: e.amount, transaction: e.transaction, internal: e.internal, explorer: mode === 'testnet' && /^0x[0-9a-fA-F]{64}$/.test(e.transaction ?? '') ? `${BASESCAN}${e.transaction}` : null })) });
+      if (method === 'GET' && url.pathname === '/health') return send(res, 200, { ok: true, mode, network, testnet: mode !== 'mainnet' });
+      if (method === 'GET' && url.pathname === '/demo/status') return send(res, 200, { mode, testnet: mode !== 'mainnet', network, product: { name: product.name, description: product.description, price, payTo, endpoint: `${publicBaseUrl}${tool.path}/sample`, mainEndpoint: `${tool.method} ${publicBaseUrl}${tool.path}`, proxiedUpstream: !tool.builtin }, agent: agent ? { address: agent.address, budget: agent.budget(), funding: await agentFunding() } : null, purchases: { external: ledger.external, internal: ledger.internal, note: '서버 데모 에이전트와 등록된 내부 주소의 구매는 internal로 따로 셉니다.' }, recent: ledger.entries.slice(-10).map(e => ({ at: e.at, route: e.route, amount: e.amount, transaction: e.transaction, internal: e.internal, explorer: mode === 'testnet' && /^0x[0-9a-fA-F]{64}$/.test(e.transaction ?? '') ? `${BASESCAN.testnet}${e.transaction}` : mode === 'mainnet' && /^0x[0-9a-fA-F]{64}$/.test(e.transaction ?? '') ? `${BASESCAN.mainnet}${e.transaction}` : null })) });
       if (method === 'POST' && url.pathname === '/demo/run') return await handleDemoRun(res);
       const page = method === 'GET' || method === 'HEAD' ? PAGE_FILES.get(url.pathname) : undefined;
       if (page) {

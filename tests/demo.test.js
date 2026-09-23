@@ -85,6 +85,40 @@ test('server-run demo agent buys twice within budget and is blocked before signi
   } finally { await demo.close(); }
 });
 
+test('mainnet mode advertises Base mainnet USDC and disables browser-triggered spending', async () => {
+  const facilitator = {
+    async getSupported() { return { kinds: [{ x402Version: 2, scheme: 'exact', network: 'eip155:8453' }], extensions: [], signers: {} }; },
+    async verify() { return { isValid: false, invalidReason: 'not_used_in_quote_test' }; },
+    async settle() { throw new Error('settlement must not run in a quote-only test'); },
+  };
+  const demo = createDemoServer({ mode: 'mainnet', payTo: PAY_TO, publicBaseUrl: 'https://mainnet.example', facilitator });
+  await demo.initialize();
+  const { port } = await demo.listen(0, '127.0.0.1');
+  try {
+    const health = await (await fetch(`http://127.0.0.1:${port}/health`)).json();
+    assert.deepEqual([health.mode, health.network, health.testnet], ['mainnet', 'eip155:8453', false]);
+    const product = await (await fetch(`http://127.0.0.1:${port}/product.json`)).json();
+    assert.equal(product.status, 'production');
+    assert.equal(product.testnet, false);
+    assert.equal(product.network, 'eip155:8453');
+    const quoteResponse = await fetch(`http://127.0.0.1:${port}/convert/sample`);
+    assert.equal(quoteResponse.status, 402);
+    const quote = decodePaymentRequiredHeader(quoteResponse.headers.get('PAYMENT-REQUIRED'));
+    assert.equal(quote.accepts[0].network, 'eip155:8453');
+    assert.equal(quote.accepts[0].asset.toLowerCase(), '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913');
+    assert.equal(quote.accepts[0].payTo, PAY_TO);
+    assert.equal((await fetch(`http://127.0.0.1:${port}/demo/run`, { method: 'POST' })).status, 503);
+  } finally { await demo.close(); }
+  assert.throws(() => createDemoServer({ mode: 'mainnet', payTo: PAY_TO, publicBaseUrl: 'https://mainnet.example', facilitator, agentKey: generatePrivateKey() }), /DEMO_AGENT_KEY is disabled/);
+  const previousId = process.env.CDP_API_KEY_ID, previousSecret = process.env.CDP_API_KEY_SECRET;
+  process.env.CDP_API_KEY_ID = ''; process.env.CDP_API_KEY_SECRET = '';
+  try { assert.throws(() => createDemoServer({ mode: 'mainnet', payTo: PAY_TO, publicBaseUrl: 'https://mainnet.example' }), /requires CDP_API_KEY_ID and CDP_API_KEY_SECRET/); }
+  finally {
+    if (previousId === undefined) delete process.env.CDP_API_KEY_ID; else process.env.CDP_API_KEY_ID = previousId;
+    if (previousSecret === undefined) delete process.env.CDP_API_KEY_SECRET; else process.env.CDP_API_KEY_SECRET = previousSecret;
+  }
+});
+
 test('an external x402 client pays for POST /convert and is counted separately', async () => {
   const { demo, base } = await start({ agentKey: generatePrivateKey() });
   try {

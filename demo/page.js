@@ -4,16 +4,27 @@ let status = null;
 async function loadStatus() {
   const res = await fetch('./demo/status', { cache: 'no-store' });
   status = await res.json();
-  $('mode-badge').textContent = status.mode === 'testnet' ? 'Base Sepolia 테스트넷 · 실제 테스트넷 정산' : '로컬 시뮬레이션 · 체인 미사용';
+  const mainnet = status.mode === 'mainnet';
+  $('network-banner').className = mainnet ? 'mainnet' : 'testnet';
+  $('network-banner').textContent = mainnet ? '⚠ MAINNET · Base (eip155:8453) · 실제 USDC 결제가 발생합니다.' : status.mode === 'testnet' ? '⚠ TESTNET · Base Sepolia (eip155:84532) · 테스트용 USDC만 사용됩니다. 실제 돈이 오가지 않습니다.' : 'LOCAL SIMULATION · 체인 미사용 · 실제 돈이 오가지 않습니다.';
+  $('mode-badge').textContent = mainnet ? 'Base 메인넷 · 실제 USDC 정산' : status.mode === 'testnet' ? 'Base Sepolia 테스트넷 · 실제 테스트넷 정산' : '로컬 시뮬레이션 · 체인 미사용';
+  document.title = mainnet ? '에이전트 구매 데모 · Base 메인넷' : status.mode === 'testnet' ? '에이전트 구매 데모 · Base Sepolia 테스트넷' : '에이전트 구매 데모 · 로컬 시뮬레이션';
+  $('price-label').textContent = mainnet ? ' USDC / 호출 · 실제 결제' : status.mode === 'testnet' ? ' USDC / 호출 · 테스트넷' : ' USDC / 호출 · 시뮬레이션';
+  $('payment-step-title').textContent = mainnet ? '메인넷 결제' : status.mode === 'testnet' ? '테스트넷 결제' : '시뮬레이션 결제';
+  $('launch-hint').textContent = mainnet ? '메인넷 파일럿 · 실제 USDC 결제 · 구매자 유입이나 매출을 보장하지 않습니다' : status.mode === 'testnet' ? '개발자 프리뷰 · 테스트넷 · 구매자 유입이나 매출을 보장하지 않습니다' : '개발자 프리뷰 · 로컬 시뮬레이션';
+  $('seller-pilot-hint').textContent = mainnet ? '현재 메인넷 파일럿입니다. 구매자 유입·환불·매출을 보장하지 않습니다.' : status.mode === 'testnet' ? 'Base Sepolia 테스트넷 파일럿입니다. 실제 사용자·구매 수요는 아직 검증되지 않았습니다.' : '로컬 시뮬레이션입니다. 실제 결제는 일어나지 않습니다.';
+  $('scope-copy').textContent = mainnet ? '범위 · Base 메인넷에서 x402 exact USDC 결제를 받습니다. 이 데모 에이전트는 실제 자금 자동 지출을 막기 위해 비활성화되어 있으며, Handsel의 온체인 위임 경로는 사용하지 않습니다.' : '범위 · 테스트넷과 로컬 시뮬레이션은 실제 자금이 오가지 않습니다. Handsel의 온체인 위임 경로는 사용하지 않습니다.';
+  $('risk-copy').textContent = mainnet ? '메인넷 구매는 실제 USDC를 판매자 주소로 정산하며 환불·에스크로는 없습니다. 판매 성과나 구매자 유입을 보장하지 않습니다.' : '메인넷 결제, 환불, 에스크로, 판매자 로그인은 아직 없습니다. 판매 성과나 구매자 유입을 보장하지 않습니다.';
   $('product-name').textContent = status.product.name;
   $('product-description').textContent = status.product.description ?? '';
   $('product-price').textContent = status.product.price;
   $('product-endpoint').textContent = `GET ${status.product.endpoint}`;
   $('product-payto').textContent = status.product.payTo;
-  $('curl-example').textContent = `curl -i ${status.product.endpoint}\n# → HTTP/1.1 402 Payment Required\n# → PAYMENT-REQUIRED: <base64 x402 v2 quote: exact · eip155:84532 · USDC · ${status.product.price}>`;
+  $('curl-example').textContent = `curl -i ${status.product.endpoint}\n# → HTTP/1.1 402 Payment Required\n# → PAYMENT-REQUIRED: <base64 x402 v2 quote: exact · ${status.network} · USDC · ${status.product.price}>`;
   $('count-external').textContent = status.purchases.external;
   $('count-internal').textContent = status.purchases.internal;
   const info = $('agent-info'); info.replaceChildren();
+  if (mainnet) { $('run').closest('section').hidden = true; }
   if (status.agent) {
     const b = status.agent.budget;
     for (const [k, v] of [['데모 에이전트', status.agent.address], ['건당 한도', `${usdc(b.perCall)} USDC`], ['남은 총예산', `${usdc(b.remaining)} / ${usdc(b.total)} USDC (예산 만료 ${new Date(b.expiresAt).toLocaleTimeString()})`], ['이 시간 구매', String(b.purchases)]]) {

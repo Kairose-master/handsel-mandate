@@ -14,8 +14,9 @@ if (config.mode === 'local' && !config.agentKey) { const { generatePrivateKey } 
 const demo = createDemoServer({ ...config, publicBaseUrl, ledgerPath: env.LEDGER_PATH ?? new URL('./ledger.local.jsonl', import.meta.url).pathname, log: (event, detail) => console.error(`[demo] ${event}: ${detail}`) });
 await demo.initialize();
 const address = await demo.listen(port, host);
-console.log(`[demo] mode=${config.mode} network=eip155:84532 (Base Sepolia TESTNET) listening on ${host}:${address.port}`);
+console.log(`[demo] mode=${config.mode} network=${demo.product.network} (${config.mode}) listening on ${host}:${address.port}`);
 console.log(`[demo] selling: ${demo.tool.name}${demo.tool.builtin ? ' (built-in)' : ` → upstream ${demo.tool.upstream}`}`);
 console.log(`[demo] public page: ${publicBaseUrl}/   paid endpoint: ${publicBaseUrl}${demo.tool.path}/sample   product: ${publicBaseUrl}/product.json`);
 if (config.mode === 'local') console.log('[demo] local mode: signatures are verified in-process, nothing settles onchain.');
+if (config.mode === 'mainnet') console.log('[demo] MAINNET mode: real USDC payments are enabled; browser-run buyer is disabled.');
 if (demo.agent) console.log(`[demo] browser-run agent ${demo.agent.address} (counted as internal), budget ${config.demoTotal} USDC/hour`);

@@ -65,6 +65,14 @@ DEMO_AGENT_KEY=0xTestnetOnlyKey npm run demo
 
 업스트림이 2xx가 아니면 검증된 결제를 취소하고 구매자에게 502를 돌려주므로, 실패한 호출에는 정산이 일어나지 않습니다. 잠금: https 고정, 리다이렉트 금지, 20초 타임아웃, 요청 256KB·응답 1MB 제한, 쿼리·자격증명이 있는 URL 거부, 판매자당 엔드포인트 하나. 비밀은 `product.json`에 나가지 않습니다.
 
+## 메인넷 모드
+
+판매자가 Base 메인넷에서 실제 USDC 결제를 받는 모드입니다. 브라우저 데모 에이전트는 메인넷에서 자동 구매하지 않으며, 외부 구매자가 자기 지갑·예산 정책으로 결제해야 합니다.
+
+필수 환경 변수: `DEMO_MODE=mainnet`, `PUBLIC_BASE_URL=https://...`, `SELLER_PAY_TO=0x...`, `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET`. 선택: `BASE_MAINNET_RPC`, `PRODUCT_PRICE`. 메인넷 facilitator는 CDP 인증 클라이언트를 사용합니다. `SELLER_PAY_TO`에는 Base 메인넷 USDC를 받을 주소를 지정하세요. `DEMO_AGENT_KEY`는 메인넷 모드에서 거부됩니다. 메인넷 결제는 실제 USDC를 이동하며 현재 환불·에스크로가 없습니다.
+
+상품은 `GET /product.json`에 노출되고 paid endpoint는 Base mainnet `eip155:8453`과 Base USDC를 사용합니다. Bazaar 색인은 metadata를 가진 endpoint에 성공적인 결제가 정산된 뒤 확인합니다.
+
 ## Vercel 배포
 
 현재 배포: **https://handsel-mandate-demo.vercel.app** (Vercel 프로젝트 `handsel-mandate-demo`, `main` 푸시마다 자동 배포). `DEMO_MODE=testnet`으로 배포돼 있고 x402.org facilitator를 씁니다. 판매자 수취 주소 `0x1f6C5A411c2223a36DC0E693387E1F69f0FBD7d0`, 데모 에이전트 지갑 `0x06578002e67Ec357Bf1932c97de5f6053AD60990` (둘 다 테스트넷 전용, 키는 Vercel 환경 변수에 있음). 에이전트 지갑의 Base Sepolia USDC 잔액이 호출가보다 적으면 페이지 버튼이 꺼지고 충전 안내가 뜹니다. https://faucet.circle.com 에서 Base Sepolia USDC를 그 주소로 보내면 재배포 없이 바로 켜집니다. `BASE_SEPOLIA_RPC`로 잔액 조회 RPC를 바꿀 수 있습니다.
@@ -76,11 +84,11 @@ DEMO_AGENT_KEY=0xTestnetOnlyKey npm run demo
 - 자동 테스트: 실제 x402 SDK가 양쪽(판매자 서버, 구매 에이전트)에서 동작하고, 서명·금액·수취인·nonce 재사용이 검증됩니다. 프록시는 가짜 업스트림으로 비밀 헤더 전달, 미결제 차단, 업스트림 실패 시 결제 취소를 검증합니다. 체인은 사용하지 않습니다.
 - **첫 테스트넷 구매 확인 (2026-09-23, 내부 테스트 거래):** 배포된 데모 에이전트 `0x06578002e67Ec357Bf1932c97de5f6053AD60990`가 `GET /convert/sample`을 0.01 USDC에 구매했고, x402.org facilitator가 정산했습니다. tx [`0x2cea207c6b688ac18519792679ac69d4bbf12ff98e301ff7194a9c3d5b0dc756`](https://sepolia.basescan.org/tx/0x2cea207c6b688ac18519792679ac69d4bbf12ff98e301ff7194a9c3d5b0dc756) (블록 47179820). RPC로 독립 대조: 상태 success, USDC `Transfer` 에이전트 → 판매자 `0x1f6C5A411c2223a36DC0E693387E1F69f0FBD7d0` 10000 µUSDC, 같은 authorizer의 `AuthorizationUsed` nonce 일치, 판매자 잔액 0.01 USDC. 이 건은 우리끼리 돌린 거래라 external 집계에 넣지 않습니다.
 - 데모 에이전트는 EOA이며 Handsel의 온체인 위임 경로(Coinbase Smart Account + MandateValidator + BlockFlow 바인딩 + DAMBI 게이트)를 쓰지 않습니다. 예산은 구매 프로세스 안에서만 강제됩니다. 이 경로 연결은 [seller-studio.md](seller-studio.md)의 게이트 5입니다.
-- 없는 것: 메인넷, 환불·에스크로, Bazaar 색인 완료 보장, 판매자 로그인, 자동 고객 유입.
+- 메인넷 모드는 코드로 지원하지만 공개 Vercel 배포는 현재 `DEMO_MODE=testnet`입니다. Vercel 설정과 CDP 프로덕션 자격증명을 확인·변경하지 않아 실제 메인넷 판매는 아직 켜지지 않았습니다. 환불·에스크로, Bazaar 색인 완료 보장, 판매자 로그인, 자동 고객 유입도 없습니다.
 
 ## 홍보 순서
 
-1. **데모 먼저.** 위 테스트넷 모드로 배포해 공개 링크를 만듭니다. 30초 영상은 페이지 그대로: 도구 카드 → 버튼 → 5단계 체크 → 결과 JSON → Basescan. "x402·AA 통합 플랫폼" 설명은 넣지 않습니다. TESTNET 배너는 자르지 않습니다.
+1. **파일럿 먼저.** 기술 흐름을 보여줄 때는 테스트넷 배너와 Basescan 링크가 보이는 데모를 씁니다. 실제 구매 의향을 검증할 때는 메인넷 환경 설정을 확인한 뒤 실제 결제라는 점을 명시하고 판매자 1곳·외부 구매자 1곳부터 연결합니다. "x402·AA 통합 플랫폼"보다 도구가 해결하는 작업을 설명합니다.
 2. **링크 공개.** 영상과 함께 페이지 링크, `product.json`, curl 한 줄을 올립니다.
 3. **개발자에게 구체적으로 제안.** 이미 도구를 공개했고 사용법 질문을 받는 개발자를 X·개발자 커뮤니티·인맥에서 고릅니다. 문구 예: "만드신 PDF 표 추출 도구를 에이전트가 호출당 구매하는 방식으로 연결해보고 싶습니다. 엔드포인트 하나만 있으면 되고, 여기 저희 도구로 돌린 테스트넷 데모가 있습니다: (링크)". 홍보가 허용되는 곳에서만 모집합니다.
 4. **판매자가 자기 사용자에게 배포.** 우리는 상품 링크(`product.json`)와 에이전트 연결 방법(402 → 서명 → 결과)을 주고, 판매자는 기존 소개 글·문서에 붙입니다. 402 응답에는 Bazaar 호환 검색 메타데이터가 포함됩니다. 실제 facilitator 색인은 성공한 테스트넷 정산 후 확인해야 하며, 색인이 되기 전까지 `product.json` 직접 링크를 배포합니다.
