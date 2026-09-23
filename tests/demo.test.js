@@ -159,3 +159,18 @@ test('local facilitator rejects tampered amount, wrong recipient and foreign sig
   assert.equal(settled.success, true); assert.equal(settled.extra.onchain, false);
   assert.equal((await facilitator.settle(payload, required.accepts[0])).success, false, 'nonce reuse');
 });
+
+test('402 carries an enriched Bazaar declaration and the paid payload echoes it for indexing', async () => {
+  const { demo, base } = await start();
+  try {
+    const first = await fetch(`${base}/convert`, { method: 'POST', body: '{"markdown":""}' });
+    const required = decodePaymentRequiredHeader(first.headers.get('PAYMENT-REQUIRED'));
+    assert.equal(required.extensions.bazaar.info.input.method, 'POST', 'server extension must add the method');
+    assert.equal(required.extensions.bazaar.info.input.bodyType, 'json');
+    const client = new x402Client().register('eip155:84532', new ExactEvmScheme(privateKeyToAccount(generatePrivateKey())));
+    const payload = await client.createPaymentPayload(required);
+    assert.ok(payload.extensions?.bazaar, 'client payload keeps the seller declaration so the facilitator can index the resource');
+    const sample = decodePaymentRequiredHeader((await fetch(`${base}/convert/sample`)).headers.get('PAYMENT-REQUIRED'));
+    assert.equal(sample.extensions.bazaar.info.input.method, 'GET');
+  } finally { await demo.close(); }
+});

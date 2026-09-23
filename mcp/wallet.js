@@ -118,7 +118,8 @@ export function createWallet({ privateKey, network, statePath, maxMandateUsdc = 
       state.receipts.push(receipt); await save();
       try {
         const client = new x402Client().register(network, new ExactEvmScheme(account));
-        const payload = await client.createPaymentPayload({ ...required, accepts: [offer], extensions: undefined });
+        // Keep the seller's declared extensions (Bazaar discovery info) so the facilitator can index the resource on settlement.
+        const payload = await client.createPaymentPayload({ ...required, accepts: [offer] });
         const paid = await fetcher(url, { ...init, signal: AbortSignal.timeout(30000), headers: { ...init.headers, 'PAYMENT-SIGNATURE': encodePaymentSignatureHeader(payload) } });
         receipt.httpStatus = paid.status;
         const settlementHeader = paid.headers.get('PAYMENT-RESPONSE');
