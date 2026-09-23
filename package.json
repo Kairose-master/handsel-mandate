@@ -8,18 +8,22 @@
     "demo": "node demo/server.js",
     "demo:buy": "node demo/agent.js",
     "record": "node scripts/record-demo.js",
-    "buy:once": "node scripts/buy-once.js"
+    "buy:once": "node scripts/buy-once.js",
+    "mcp": "node mcp/server.js",
+    "mcp:http": "node mcp/server.js --http"
   },
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
+    "@coinbase/cdp-sdk": "1.56.0",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "@x402/core": "2.26.0",
     "@x402/evm": "2.26.0",
-    "viem": "2.56.8",
     "@x402/extensions": "2.26.0",
-    "@coinbase/cdp-sdk": "1.56.0",
-    "@x402/svm": "2.26.0"
+    "@x402/svm": "2.26.0",
+    "viem": "2.56.8",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@ethereumjs/block": "10.1.3",

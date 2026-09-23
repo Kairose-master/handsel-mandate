@@ -4,6 +4,10 @@
 
 도구 하나(Markdown 표 → JSON 변환기)를 공식 x402 SDK로 유료화하고, 에이전트가 **발견 → 예산 확인 → 테스트넷 결제 → 결과 수령**을 끝까지 수행하는 공개 데모입니다. 공개 링크: **https://handsel-mandate-demo.vercel.app** (프로덕션은 **Base 메인넷 실결제 모드**, 프리뷰는 테스트넷. 테스트넷 첫 정산 tx [`0x2cea…dc756`](https://sepolia.basescan.org/tx/0x2cea207c6b688ac18519792679ac69d4bbf12ff98e301ff7194a9c3d5b0dc756)). 직접 실행은 `npm run demo` 후 `http://127.0.0.1:4402`. 로컬 모드는 키 없이 실행되며 체인을 쓰지 않습니다. 테스트넷 모드 배포 방법, 내부/외부 구매 집계, 홍보 순서는 [docs/public-demo.md](docs/public-demo.md)를 보세요. 판매자는 `PRODUCT_FILE`(Seller Studio 내보내기)과 `UPSTREAM_SECRET`만으로 자기 API 앞에 같은 결제 게이트를 세울 수 있습니다. 테스트넷 정산은 내부 거래로 확인했고, 메인넷 정산과 외부 구매자 건은 아직 없습니다.
 
+## 402-LAB MCP · "1달러 안에서" 위임
+
+사람이 자연어로 예산을 위임하면 MCP 클라이언트(크롬 확장·Aside·Claude Desktop·Cursor)가 `discover`로 x402 상품을 찾고 `buy`로 예산 안에서만 결제해 결과만 돌려줍니다. 서버가 상한·건당 한도·네트워크·판매자 허용 목록을 강제하고 예약은 서명 전에 기록됩니다. `npm run mcp`(stdio) 또는 `npm run mcp:http`(확장용). [docs/mcp.md](docs/mcp.md).
+
 ## Seller Studio · 판매자용 초안
 
 바이브 코딩으로 만든 도구의 상품 설명·호출 예제·가격을 정리하고, x402 연동 설정을 내보내는 로컬 스튜디오를 추가했습니다. `node scripts/seller-studio.js` 실행 후 `http://127.0.0.1:4173`을 여세요. 의존성 설치 없이 실행됩니다. 상품 미리보기·예산 제한 모의 구매·JSON 다운로드를 지원합니다. 실제 API 호출·결제·Bazaar 등록·공개 판매는 수행하지 않습니다. [범위와 다음 연동 단계](docs/seller-studio.md).
