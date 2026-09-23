@@ -74,7 +74,7 @@ DEMO_AGENT_KEY=0xTestnetOnlyKey npm run demo
 ## 검증 상태
 
 - 자동 테스트: 실제 x402 SDK가 양쪽(판매자 서버, 구매 에이전트)에서 동작하고, 서명·금액·수취인·nonce 재사용이 검증됩니다. 프록시는 가짜 업스트림으로 비밀 헤더 전달, 미결제 차단, 업스트림 실패 시 결제 취소를 검증합니다. 체인은 사용하지 않습니다.
-- **실제 Base Sepolia 정산은 이 변경에서 실행하지 않았습니다.** 자금 있는 테스트넷 키와 공개 https 도메인이 필요합니다. 테스트넷 모드로 배포한 뒤 첫 구매의 tx 해시를 이 문서에 기록하세요.
+- **첫 테스트넷 구매 확인 (2026-09-23, 내부 테스트 거래):** 배포된 데모 에이전트 `0x06578002e67Ec357Bf1932c97de5f6053AD60990`가 `GET /convert/sample`을 0.01 USDC에 구매했고, x402.org facilitator가 정산했습니다. tx [`0x2cea207c6b688ac18519792679ac69d4bbf12ff98e301ff7194a9c3d5b0dc756`](https://sepolia.basescan.org/tx/0x2cea207c6b688ac18519792679ac69d4bbf12ff98e301ff7194a9c3d5b0dc756) (블록 47179820). RPC로 독립 대조: 상태 success, USDC `Transfer` 에이전트 → 판매자 `0x1f6C5A411c2223a36DC0E693387E1F69f0FBD7d0` 10000 µUSDC, 같은 authorizer의 `AuthorizationUsed` nonce 일치, 판매자 잔액 0.01 USDC. 이 건은 우리끼리 돌린 거래라 external 집계에 넣지 않습니다.
 - 데모 에이전트는 EOA이며 Handsel의 온체인 위임 경로(Coinbase Smart Account + MandateValidator + BlockFlow 바인딩 + DAMBI 게이트)를 쓰지 않습니다. 예산은 구매 프로세스 안에서만 강제됩니다. 이 경로 연결은 [seller-studio.md](seller-studio.md)의 게이트 5입니다.
 - 없는 것: 메인넷, 환불·에스크로, Bazaar 등록, 판매자 로그인, 자동 고객 유입.
 
