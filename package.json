@@ -11,7 +11,8 @@
     "buy:once": "node scripts/buy-once.js",
     "mcp": "node mcp/server.js",
     "mcp:http": "node mcp/server.js --http",
-    "record:testnet": "node scripts/record-harness.js"
+    "record:testnet": "node scripts/record-harness.js",
+    "video:x": "bash scripts/video/make-x-video.sh"
   },
   "engines": {
     "node": ">=22"
