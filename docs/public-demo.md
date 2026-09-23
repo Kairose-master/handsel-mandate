@@ -84,7 +84,7 @@ DEMO_AGENT_KEY=0xTestnetOnlyKey npm run demo
 
 ## Vercel 배포
 
-현재 배포: **https://handsel-mandate-demo.vercel.app** (Vercel 프로젝트 `handsel-mandate-demo`, `main` 푸시마다 자동 배포). **2026-09-23부터 프로덕션은 `DEMO_MODE=mainnet`** 입니다. CDP facilitator를 쓰고, 402 견적은 `eip155:8453` Base USDC, 수취 주소 `0xe818cf591E65C93600311E789f25301138299232` (판매자가 통제하는 메인넷 주소). 브라우저 데모 에이전트는 서버가 거부해 꺼져 있고, 페이지에 실결제 경고가 뜹니다. 전환 직후 확인: `/health` mainnet, 402의 network·asset·payTo, `product.json` status `production`, `/demo/run` 503. 실제 메인넷 정산은 아직 1건도 없으며, 판매자 본인 지갑으로 `npm run buy:once ... --mainnet` 1회 실행 후 Basescan에서 확인해야 합니다. 프리뷰 배포는 `DEMO_MODE=testnet`과 테스트넷 에이전트 키를 유지합니다. 테스트넷 시절 값(에이전트 `0x0657…0990`, 판매자 `0x1f6C…D7d0`)은 프로덕션에서 제거했습니다.
+현재 배포: **https://handsel-mandate-demo.vercel.app** (Vercel 프로젝트 `handsel-mandate-demo`, `main` 푸시마다 자동 배포). **2026-09-23부터 프로덕션은 `DEMO_MODE=mainnet`** 입니다. CDP facilitator를 쓰고, 402 견적은 `eip155:8453` Base USDC, 수취 주소 `0xe818cf591E65C93600311E789f25301138299232` (판매자가 통제하는 메인넷 주소). 브라우저 데모 에이전트는 서버가 거부해 꺼져 있고, 페이지에 실결제 경고가 뜹니다. 전환 직후 확인: `/health` mainnet, 402의 network·asset·payTo, `product.json` status `production`, `/demo/run` 503. **첫 메인넷 정산 확인 (2026-09-23, 내부 테스트 거래):** 판매자 본인 지갑 `0xAdC7A7FF6F9a00FbBB099867951D57e494C1C3d0`이 `GET /biz/status/sample`을 0.02 USDC에 구매, CDP facilitator 정산. tx [`0x4da02862…c42cfd`](https://basescan.org/tx/0x4da028621c3c27ce57ceecc9023f724c62a9dff4ebeaf86f5c90924440c42cfd) (블록 51687095). RPC 대조: success, USDC `Transfer` 구매자 → 판매자 `0xe818…9232` 20000 µUSDC, 같은 authorizer의 `AuthorizationUsed` nonce 일치. 응답은 국세청 상태조회 결과(계속사업자). 우리 지갑끼리의 거래라 external로 세지 않습니다. 프리뷰 배포는 `DEMO_MODE=testnet`과 테스트넷 에이전트 키를 유지합니다. 테스트넷 시절 값(에이전트 `0x0657…0990`, 판매자 `0x1f6C…D7d0`)은 프로덕션에서 제거했습니다.
 
 저장소 루트가 그대로 Vercel 프로젝트입니다 (`api/index.js`가 모든 경로를 받고 `vercel.json`이 재작성). 환경 변수는 위와 같고, `PUBLIC_BASE_URL`을 비우면 프로덕션 도메인을 자동으로 씁니다. 서버리스라 구매 집계·데모 예산·로컬 모드의 nonce 기록은 인스턴스 메모리에만 있고 JSONL 원장은 꺼집니다. 집계가 필요하면 로그 드레인이나 외부 저장소를 붙이세요. 브라우저 버튼의 데모 에이전트는 같은 인스턴스에 루프백으로 접속해 구매하므로 배포 보호 설정과 무관하게 동작합니다.
 
@@ -93,7 +93,7 @@ DEMO_AGENT_KEY=0xTestnetOnlyKey npm run demo
 - 자동 테스트: 실제 x402 SDK가 양쪽(판매자 서버, 구매 에이전트)에서 동작하고, 서명·금액·수취인·nonce 재사용이 검증됩니다. 프록시는 가짜 업스트림으로 비밀 헤더 전달, 미결제 차단, 업스트림 실패 시 결제 취소를 검증합니다. 체인은 사용하지 않습니다.
 - **첫 테스트넷 구매 확인 (2026-09-23, 내부 테스트 거래):** 배포된 데모 에이전트 `0x06578002e67Ec357Bf1932c97de5f6053AD60990`가 `GET /convert/sample`을 0.01 USDC에 구매했고, x402.org facilitator가 정산했습니다. tx [`0x2cea207c6b688ac18519792679ac69d4bbf12ff98e301ff7194a9c3d5b0dc756`](https://sepolia.basescan.org/tx/0x2cea207c6b688ac18519792679ac69d4bbf12ff98e301ff7194a9c3d5b0dc756) (블록 47179820). RPC로 독립 대조: 상태 success, USDC `Transfer` 에이전트 → 판매자 `0x1f6C5A411c2223a36DC0E693387E1F69f0FBD7d0` 10000 µUSDC, 같은 authorizer의 `AuthorizationUsed` nonce 일치, 판매자 잔액 0.01 USDC. 이 건은 우리끼리 돌린 거래라 external 집계에 넣지 않습니다.
 - 데모 에이전트는 EOA이며 Handsel의 온체인 위임 경로(Coinbase Smart Account + MandateValidator + BlockFlow 바인딩 + DAMBI 게이트)를 쓰지 않습니다. 예산은 구매 프로세스 안에서만 강제됩니다. 이 경로 연결은 [seller-studio.md](seller-studio.md)의 게이트 5입니다.
-- 프로덕션은 메인넷 모드로 켜져 있습니다. 실제 메인넷 정산 확인과 Bazaar 색인 확인은 아직 남아 있습니다. 환불·에스크로, 판매자 로그인, 자동 고객 유입도 없습니다.
+- 프로덕션은 메인넷 모드로 켜져 있고 첫 메인넷 정산(내부 거래)을 확인했습니다. Bazaar 색인 확인은 정산 이후 진행 중입니다. 환불·에스크로, 판매자 로그인, 자동 고객 유입도 없습니다.
 
 ## 홍보 순서
 
