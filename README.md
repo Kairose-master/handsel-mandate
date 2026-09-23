@@ -1,8 +1,8 @@
-# Handsel Mandate — browser prototype
+# 402-LAB — agent commerce prototype
 
 ## Public Demo · 테스트넷 구매 데모
 
-도구 하나(사업자등록 상태 조회, 국세청 API 중계. 키가 없으면 Markdown 표 변환기)를 공식 x402 SDK로 유료화하고, 에이전트가 **발견 → 예산 확인 → 테스트넷 결제 → 결과 수령**을 끝까지 수행하는 공개 데모입니다. 공개 링크: **https://handsel-mandate-demo.vercel.app** (프로덕션은 **Base 메인넷 실결제 모드**, 프리뷰는 테스트넷. 테스트넷 첫 정산 tx [`0x2cea…dc756`](https://sepolia.basescan.org/tx/0x2cea207c6b688ac18519792679ac69d4bbf12ff98e301ff7194a9c3d5b0dc756)). 직접 실행은 `npm run demo` 후 `http://127.0.0.1:4402`. 로컬 모드는 키 없이 실행되며 체인을 쓰지 않습니다. 테스트넷 모드 배포 방법, 내부/외부 구매 집계, 홍보 순서는 [docs/public-demo.md](docs/public-demo.md)를 보세요. 판매자는 `PRODUCT_FILE`(Seller Studio 내보내기)과 `UPSTREAM_SECRET`만으로 자기 API 앞에 같은 결제 게이트를 세울 수 있습니다. 테스트넷 정산은 내부 거래로 확인했고, 메인넷 정산과 외부 구매자 건은 아직 없습니다.
+공식 x402 SDK 기반 공개 데모입니다. 확인 가능한 정산은 Base Sepolia 테스트넷입니다. 402-LAB MCP가 외부 판매자 GetBags의 API를 0.01 test USDC에 구매한 tx: [Base Sepolia](https://sepolia.basescan.org/tx/0xd02557b808ed70e8533e153bcfb132d3ead8c6e931cb13e43f1936359e6279df). 이 기록은 우리 에이전트가 외부 서비스를 구매한 증거이며, 외부 사용자가 402-LAB 상품을 구매했거나 메인넷 매출이 발생했다는 뜻은 아닙니다. 공개 데모: **https://handsel-mandate-demo.vercel.app**. 판매자 연결 및 테스트넷 모드 안내는 [docs/public-demo.md](docs/public-demo.md)를 참고하세요.
 
 ## 402-LAB MCP · "1달러 안에서" 위임
 
