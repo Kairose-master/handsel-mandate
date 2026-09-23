@@ -9,7 +9,7 @@
 | `mandate_status` | 현재 위임 상태 | 항상 먼저 호출 |
 | `mandate_create(total_usdc, per_call_usdc?, minutes?, allowed_sellers?)` | 사람이 말한 예산을 위임으로 기록 | 서버 설정 상한(`MANDATE_MAX_USDC`, 기본 1 USDC / `MANDATE_MAX_MINUTES` 60분) 초과 거부, 활성 위임 1개만 |
 | `mandate_revoke` | 즉시 회수 | 이후 서명 차단. 이미 서명된 건은 정산될 수 있음 |
-| `discover(query)` | 상품 검색 | 설정 네트워크의 상품만. 판매자 `product.json` 목록 + (옵션) x402 Bazaar |
+| `discover(query)` | 상품 검색 | 기본 검색원은 **x402 Bazaar**(CDP discovery API, 약 1.5만 개 등록 리소스)이고, 판매자 `product.json` 목록을 더합니다. 설정 네트워크의 exact USDC 상품만, 에스크로형 결제 흐름은 제외 |
 | `buy(url, method?, input?, request_id?)` | 402 견적 검증 → 예산 예약 → 서명 → 결과 | 건당 한도, 남은 총예산, 네트워크·USDC 고정, 판매자 허용 목록, https 전용, 견적 URL 일치. 예약은 서명 전에 기록되고 환불되지 않음. `request_id` 재사용 시 재결제 없음 |
 | `receipts` | 영수증과 정산 tx 링크 | |
 
@@ -22,7 +22,8 @@ BUYER_PRIVATE_KEY=0x...            # 구매 지갑 (테스트넷이면 Base Sepo
 NETWORK=eip155:84532               # 또는 eip155:8453 (메인넷, 실제 USDC)
 MANDATE_MAX_USDC=1                 # 사람이 정하는 절대 상한
 CATALOG_URLS=https://handsel-mandate-demo.vercel.app/product.json   # 쉼표로 여러 개
-BAZAAR=1                           # x402 Bazaar 검색도 포함 (선택)
+BAZAAR=0                           # x402 Bazaar 검색을 끄고 싶을 때만 (기본 켜짐, BAZAAR_URL로 교체 가능)
+DISCOVER_MAX_PRICE=0.05            # 이 가격 초과 상품은 검색 결과에서 제외 (선택)
 npm run mcp                        # stdio
 npm run mcp:http -- 4402           # http://127.0.0.1:4402/mcp, 시작 시 Bearer 토큰 출력
 ```
@@ -52,6 +53,13 @@ const r = await mcp.call('buy', { url: items[0].url });      // r.result 가 도
 ```
 
 보호 장치: 127.0.0.1 바인딩, Host 검사, Bearer 토큰 필수, `Origin`이 있으면 `chrome-extension://…`만 허용(일반 웹페이지는 403). 토큰은 서버 시작 시 stderr에 찍히며 확장 옵션에 한 번 저장합니다.
+
+## Bazaar 연동 방식
+
+- 검색: 질의가 있으면 Bazaar `search`(자연어), 결과가 없거나 질의가 없으면 `listResources` 100건을 가져와 네트워크로 거릅니다. API는 네트워크 필터를 항상 지키지 않으므로 클라이언트에서 다시 거릅니다.
+- 정규화: `extensions.bazaar.info`의 `input.method`, `input.body`(POST 예제), `input.queryParams`(GET 예제), `output.example`을 그대로 `exampleRequest`·`exampleQuery`·`exampleResponse`로 노출합니다. 에이전트는 이 예제 모양대로 `buy`의 `input`(POST) 또는 `query`(GET)를 채웁니다.
+- 결제: 메인넷 USDC의 EIP-712 도메인 이름은 "USD Coin", 테스트넷은 "USDC"입니다. 지갑은 네트워크별 정확한 이름만 받습니다. GET 도구는 쿼리 문자열이 붙어도 견적의 리소스 URL(경로까지)과 일치하면 됩니다. 승인 유효 시간은 최대 3600초까지 허용합니다.
+- 우리 판매자 페이지의 402 응답에도 Bazaar 메타데이터가 들어 있어, 메인넷 정산이 한 번 일어나면 같은 목록에 자동으로 실립니다.
 
 ## 권한 모델
 

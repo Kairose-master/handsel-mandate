@@ -11,8 +11,9 @@ import { ExactEvmScheme } from '@x402/evm/exact/client';
 import { privateKeyToAccount } from 'viem/accounts';
 
 export const NETWORKS = {
-  'eip155:84532': { name: 'Base Sepolia (testnet)', usdc: '0x036cbd53842c5426634e7929541ec2318f3dcf7e', explorer: 'https://sepolia.basescan.org/tx/', testnet: true },
-  'eip155:8453': { name: 'Base (mainnet)', usdc: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', explorer: 'https://basescan.org/tx/', testnet: false },
+  // domainName is the token's EIP-712 domain: a quote naming anything else cannot produce a valid signature.
+  'eip155:84532': { name: 'Base Sepolia (testnet)', usdc: '0x036cbd53842c5426634e7929541ec2318f3dcf7e', domainName: 'USDC', explorer: 'https://sepolia.basescan.org/tx/', testnet: true },
+  'eip155:8453': { name: 'Base (mainnet)', usdc: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', domainName: 'USD Coin', explorer: 'https://basescan.org/tx/', testnet: false },
 };
 const MAX_BODY = 1024 * 1024;
 export function micro(value) {
@@ -61,13 +62,15 @@ export function createWallet({ privateKey, network, statePath, maxMandateUsdc = 
   function check(required, url, m) {
     if (!active(m)) throw new Error('No active mandate');
     if (required?.x402Version !== 2) throw new Error('Seller does not speak x402 v2');
-    if (required.resource?.url !== url) throw new Error(`Quote is for ${required.resource?.url}, not ${url}`);
+    // Bazaar GET tools take query parameters; compare the resource without them.
+    const strip = u => { try { const x = new URL(u); return `${x.origin}${x.pathname}`; } catch { return u; } };
+    if (strip(required.resource?.url) !== strip(url)) throw new Error(`Quote is for ${required.resource?.url}, not ${url}`);
     const offer = required.accepts?.find(a => a.scheme === 'exact' && a.network === network && same(a.asset, net.usdc));
     if (!offer) throw new Error(`No exact USDC offer on ${net.name}; refusing other networks or assets`);
     if (!/^[1-9]\d{0,12}$/.test(offer.amount)) throw new Error('Invalid quote amount');
-    if (offer.extra?.name !== 'USDC' || offer.extra?.version !== '2') throw new Error('Unexpected token domain');
-    if (!Number.isInteger(offer.maxTimeoutSeconds) || offer.maxTimeoutSeconds < 1 || offer.maxTimeoutSeconds > 300) throw new Error('Authorization window outside 1–300 seconds');
-    if (now() + offer.maxTimeoutSeconds * 1000 > m.expiresAt) throw new Error('Authorization would outlive the mandate');
+    if (offer.extra?.name !== net.domainName || offer.extra?.version !== '2') throw new Error(`Unexpected token domain (${offer.extra?.name} ${offer.extra?.version}); expected ${net.domainName} 2`);
+    if (offer.extra?.paymentFlow && offer.extra.paymentFlow !== 'authorization') throw new Error(`Unsupported payment flow ${offer.extra.paymentFlow}`);
+    if (!Number.isInteger(offer.maxTimeoutSeconds) || offer.maxTimeoutSeconds < 1 || offer.maxTimeoutSeconds > 3600) throw new Error('Authorization window outside 1–3600 seconds');
     if (m.allowedSellers?.length && !m.allowedSellers.some(s => same(s, offer.payTo))) throw new Error(`Seller ${offer.payTo} is not in the mandate allowlist`);
     const amount = BigInt(offer.amount);
     if (amount > BigInt(m.perCall)) throw new Error(`Price ${usdc(amount)} USDC exceeds the per-call limit ${usdc(m.perCall)} USDC`);
@@ -91,13 +94,14 @@ export function createWallet({ privateKey, network, statePath, maxMandateUsdc = 
     revoke: () => serial(async () => { await load(); if (state.mandate) { state.mandate.revoked = true; await save(); } return view(state.mandate); }),
     status: async () => { await load(); return view(state.mandate); },
     receipts: async () => { await load(); return state.receipts.map(r => ({ ...r, explorer: /^0x[0-9a-fA-F]{64}$/.test(r.transaction ?? '') ? net.explorer + r.transaction : null })); },
-    buy: ({ url, method = 'GET', body, requestId = crypto.randomUUID() }) => serial(async () => {
+    buy: ({ url, method = 'GET', body, query, requestId = crypto.randomUUID() }) => serial(async () => {
       await load();
       const m = state.mandate;
       if (!active(m)) throw new Error('No active mandate; ask the human to delegate a budget first');
       if (!/^[\w-]{1,100}$/.test(requestId)) throw new Error('Invalid request id');
       const old = state.receipts.find(r => r.requestId === requestId && r.mandateId === m.id); if (old) return old;
       let target; try { target = new URL(url); } catch { throw new Error('Invalid product URL'); }
+      if (query && typeof query === 'object') { for (const [k, v] of Object.entries(query)) target.searchParams.set(k, String(v)); url = target.href; }
       if (target.protocol !== 'https:' && !['127.0.0.1', 'localhost'].includes(target.hostname)) throw new Error('Only https product URLs are allowed');
       method = String(method).toUpperCase();
       if (!['GET', 'POST'].includes(method)) throw new Error('method must be GET or POST');
