@@ -18,6 +18,6 @@ No endpoint is contacted, no signature is requested, no money moves, no discover
 
 ## Demand experiment
 
-Recruit three developers with working input/output APIs and existing users. Offer a fixed-scope paid integration for one endpoint. Measure separately: paid seller onboarding, external buyer's successful paid use, and repeat paid use. Test purchases do not qualify. Bazaar supplies a discovery channel, not guaranteed buyers. Start with document extraction/conversion as a category hypothesis; change it if interviews show stronger demand elsewhere.
+Recruit developers with working input/output APIs and existing users; no fixed cap. Offer a fixed-scope paid integration for one endpoint. Measure separately: paid seller onboarding, external buyer's successful paid use, and repeat paid use. Test purchases do not qualify. Bazaar supplies a discovery channel, not guaranteed buyers. Start with document extraction/conversion as a category hypothesis; change it if interviews show stronger demand elsewhere.
 
 Reusable infrastructure: official x402 SDK, facilitator and Bazaar; the existing Handsel mandate implementation. No new payment protocol, search engine, wallet or tax/Merchant-of-Record service is part of this slice.
