@@ -71,6 +71,8 @@ DEMO_AGENT_KEY=0xTestnetOnlyKey npm run demo
 
 필수 환경 변수: `DEMO_MODE=mainnet`, `PUBLIC_BASE_URL=https://...`, `SELLER_PAY_TO=0x...`, `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET`. 선택: `BASE_MAINNET_RPC`, `PRODUCT_PRICE`. 메인넷 facilitator는 CDP 인증 클라이언트를 사용합니다. `SELLER_PAY_TO`에는 Base 메인넷 USDC를 받을 주소를 지정하세요. `DEMO_AGENT_KEY`는 메인넷 모드에서 거부됩니다. 메인넷 결제는 실제 USDC를 이동하며 현재 환불·에스크로가 없습니다.
 
+전환 절차 (Vercel 프로젝트 `handsel-mandate-demo`): ① `CDP_API_KEY_ID`·`CDP_API_KEY_SECRET`(portal.cdp.coinbase.com → API Keys → Secret API key)와 본인이 통제하는 Base 메인넷 USDC 수취 주소를 준비 ② 환경 변수 `SELLER_PAY_TO`를 그 주소로 바꾸고 CDP 키 2개를 sensitive로 추가 ③ `DEMO_AGENT_KEY`·`SELLER_PRIVATE_KEY`(테스트넷 키) 삭제 ④ `DEMO_MODE=mainnet`으로 변경 후 재배포 ⑤ `curl -i https://handsel-mandate-demo.vercel.app/convert/sample`로 402의 network가 `eip155:8453`, asset이 Base USDC인지 확인 ⑥ 본인 지갑으로 실구매 1건: `npm run buy:once -- https://handsel-mandate-demo.vercel.app/convert/sample --key 0x... --max 0.01 --mainnet` 후 Basescan에서 USDC Transfer 확인.
+
 상품은 `GET /product.json`에 노출되고 paid endpoint는 Base mainnet `eip155:8453`과 Base USDC를 사용합니다. Bazaar 색인은 metadata를 가진 endpoint에 성공적인 결제가 정산된 뒤 확인합니다.
 
 ## Vercel 배포
