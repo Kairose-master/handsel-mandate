@@ -1,100 +1,114 @@
-# 홍보 문안: "바이브 코딩으로 만든 제품, 에이전트가 사서 쓰게 해드립니다"
+# 402-LAB 런칭 문안 및 실행 체크리스트
 
-> 게시 전 체크: 영상 1개(프리뷰 URL에서 `npm run record`, 마지막에 메인넷 Basescan 화면), 메인넷 실구매 tx 1개(`npm run buy:once ... --mainnet`), 신청 링크 클릭 확인. 이 셋이 없으면 2/ 트윗의 "실제 USDC로 결제받고 있습니다"를 "결제받을 준비가 됐습니다"로 바꿔 올리세요.
+## 현재 주장 가능한 범위
 
-원칙: 플랫폼 설명 대신 **만든 도구 → 가격 → 에이전트 구매 → 결과**를 보여준다. 항상 테스트넷·개발자 프리뷰·보장 없음을 같이 말한다. 링크는 두 개만: 데모 https://handsel-mandate-demo.vercel.app , 신청 https://github.com/Kairose-master/handsel-mandate/issues/new?template=sell-your-tool.yml
+- 공개 데모는 x402 상품 탐색부터 결제 응답과 결과 수령까지 보여주는 개발자 프리뷰다.
+- Base Sepolia에서 내부 정산 기록이 있다.
+- 402-LAB MCP가 외부 판매자 GetBags API를 0.01 test USDC에 구매한 테스트넷 tx가 있다: https://sepolia.basescan.org/tx/0xd02557b808ed70e8533e153bcfb132d3ead8c6e931cb13e43f1936359e6279df
+- 아직 확인되지 않은 것: 메인넷 실제 정산, 외부 사용자의 402-LAB 상품 구매, 반복 구매, Bazaar 유입/색인 효과, 구매자 수.
+- 공개 카운터는 서버 인스턴스 메모리 값이다. 체인 기반 검증이 연결되기 전까지 외부 구매 수치로 홍보하지 않는다.
+- x402 Bazaar의 상품 목록 수를 실제 구매자 수나 구매 의도로 표현하지 않는다.
 
-## X 스레드 (한국어) · 붙여넣기용
+데모 링크: https://handsel-mandate-demo.vercel.app  
+판매 신청: https://github.com/Kairose-master/handsel-mandate/issues/new?template=sell-your-tool.yml
 
-**1/**
-바이브 코딩으로 만든 도구, AI 에이전트한테 팔아보고 싶나요?
+## 청중 1: 에이전트를 쓰는 사람 (구매자)
 
-작동하는 API가 있으면 누구나 됩니다. 코드는 안 고칩니다. 엔드포인트 하나에 결제 게이트를 붙이고, 에이전트가 읽는 상품 설명과 구매 링크를 드립니다.
+### 한국어 X 게시물
+“1달러 안에서 이 문서 표를 뽑아줘.”
 
-👉 https://handsel-mandate-demo.vercel.app
+402-LAB MCP는 x402 상품을 찾고, 허용된 예산 안에서 구매한 뒤 결과를 돌려주는 개발자 프리뷰입니다. Base Sepolia에서 외부 API를 테스트넷 USDC로 구매하는 흐름을 확인했습니다. 메인넷 실결제나 외부 고객 구매는 아직 검증 중입니다.
 
-**2/**
-어떻게 도는지: 에이전트가 상품을 발견 → 허용 예산 확인 → x402로 호출당 결제 → 결과 수령. 저희 도구로 먼저 끝까지 돌렸고, 지금은 Base 메인넷에서 실제 USDC로 결제받고 있습니다. (영상)
+데모: https://handsel-mandate-demo.vercel.app  
+MCP 설치: https://github.com/Kairose-master/handsel-mandate/blob/main/docs/mcp.md
 
-**3/**
-구매 쪽도 열려 있습니다. "1달러 안에서 이 문서 표를 뽑아줘"라고 하면 MCP 클라이언트(Claude Desktop·Cursor·크롬 확장)가 x402 Bazaar 1.5만 개 상품에서 찾아 예산 안에서만 사고 결과만 돌려줍니다. 예산과 권한은 서버가 강제합니다.
-https://github.com/Kairose-master/handsel-mandate/blob/main/docs/mcp.md
+### English X post
+“Find the right tool, spend under $1, and return the result.”
 
-**4/**
-개발자 프리뷰입니다. 구매자 유입이나 매출은 보장 못 합니다. 첫 목표는 외부 판매자 한 명의 도구를 외부 구매자 한 명이 실제로 쓰는 것. 그다음 반복 구매.
+402-LAB is an MCP buyer prototype that discovers x402 services and checks a configured budget before purchase. We have a Base Sepolia testnet receipt for buying an external API. Mainnet customer purchases are not yet verified.
 
-신청(엔드포인트·입출력 예제·가격만): https://github.com/Kairose-master/handsel-mandate/issues/new?template=sell-your-tool.yml
+Demo: https://handsel-mandate-demo.vercel.app  
+MCP setup: https://github.com/Kairose-master/handsel-mandate/blob/main/docs/mcp.md
 
-## X thread (English)
+## 청중 2: API를 만든 개발자 (판매자)
 
-**1/** Built a tool by vibe coding? Let AI agents pay for it per call.
-Anyone with a working API can join. No code changes: one endpoint gets an x402 paywall, an agent-readable product description and a buy link.
-👉 https://handsel-mandate-demo.vercel.app
+### 한국어 공개 글
+바이브 코딩으로 만든 API를 에이전트가 호출당 구매할 수 있게 연결하는 파일럿을 찾습니다.
 
-**2/** The loop: agent discovers → checks its budget → pays per call over x402 → gets the result. We ran it end to end on our own tool; it now takes real USDC on Base mainnet. (video)
+작동하는 엔드포인트, 입력·출력 예시, 호출 가격, 수취 주소가 있으면 x402 판매 프록시를 함께 시험합니다. 현재는 제품별 설정과 검증이 필요하고 구매자 유입이나 매출은 보장하지 않습니다. 먼저 테스트넷에서 연동하고, 실제 사용자가 원하는지 확인합니다.
 
-**3/** Buyer side is open too: say "within $1, extract the tables from this doc" and an MCP client (Claude Desktop, Cursor, a Chrome extension) searches the x402 Bazaar (~15k listings), buys only inside that budget and returns just the result. Budget and permissions are enforced server-side.
+판매 신청: https://github.com/Kairose-master/handsel-mandate/issues/new?template=sell-your-tool.yml  
+데모: https://handsel-mandate-demo.vercel.app
 
-**4/** Developer preview. No promise of buyers or revenue. First goal: one external seller's tool used by one external buyer, then repeat purchases.
-Apply (endpoint, example I/O, price): https://github.com/Kairose-master/handsel-mandate/issues/new?template=sell-your-tool.yml
+### English seller post
+We’re piloting x402 checkout for APIs built by indie developers.
 
-## 개발자 커뮤니티 글 (홍보가 허용되는 곳)
+Share a working endpoint, example input/output, per-call price, and receiving address. We’ll test a seller proxy integration with you. Setup is currently hands-on; buyer traffic and revenue are not guaranteed. We start on testnet and validate demand before discussing production.
 
-제목: 바이브 코딩으로 만든 API, 에이전트가 호출당 결제해서 쓰게 연결해 드립니다 (개발자 프리뷰)
+Apply: https://github.com/Kairose-master/handsel-mandate/issues/new?template=sell-your-tool.yml
 
-본문:
-- 무엇: 여러분의 기존 API 앞에 x402 결제 게이트를 세우고, 에이전트가 읽는 상품 설명과 구매 링크를 만들어 드립니다. 코드는 안 고칩니다.
-- 증거: 저희 도구로 끝까지 돌린 공개 데모. 에이전트가 402 견적을 받고, 예산을 확인하고, 결제하고, 결과를 받는 흐름이 그대로 보입니다. 지금은 Base 메인넷에서 실제 USDC로 결제받습니다. https://handsel-mandate-demo.vercel.app
-- 구매자 쪽: MCP 서버 하나로 Claude Desktop·Cursor·크롬 확장에서 "1달러 안에서"라고 위임하면 x402 Bazaar에서 찾아 예산 안에서만 삽니다. https://github.com/Kairose-master/handsel-mandate/blob/main/docs/mcp.md
-- 조건: 작동하는 입력/출력 API, 호출당 가격, 수취 주소. 이미 공개했고 누군가 사용법을 물어본 도구를 우선합니다.
-- 솔직하게: 개발자 프리뷰. 구매자 유입·매출 보장 없음, 환불·에스크로 없음. 첫 목표는 외부 구매자 1명이 여러분 도구를 실제로 쓰는 것, 그다음 반복 구매.
-- 신청: (링크)
+### 개인 DM 템플릿
+안녕하세요, [도구]를 [발견한 곳]에서 봤습니다. 에이전트가 호출당 결제해 쓰는 방식으로 연결해볼 수 있을지 여쭤봅니다.
 
-## 개별 DM (개발자 한 명에게)
+작동하는 API라면 입력/출력 예시와 원하는 호출 가격으로 테스트넷 파일럿을 같이 진행할 수 있습니다. 아직 구매자 유입이나 매출을 보장하는 단계는 아니고, 우선 연동 난이도와 실제 수요를 검증하려고 합니다. 관심 있으시면 간단한 예제와 가격만 보내주세요.
 
-> 안녕하세요, 만드신 [도구 이름] 잘 봤습니다. [어디서 봤는지 한 줄].
->
-> 이 도구를 AI 에이전트가 호출당 구매하는 방식으로 연결해보고 싶습니다. 엔드포인트 하나만 있으면 되고, 코드는 안 고치셔도 됩니다. 저희 도구로 먼저 돌려 지금 Base 메인넷에서 실제로 결제받고 있는 페이지입니다: https://handsel-mandate-demo.vercel.app
->
-> 개발자 프리뷰라 구매자를 보장하진 못하고, 테스트넷에서 먼저 연결한 뒤 첫 외부 구매가 나오는지 같이 보는 제안입니다. 관심 있으시면 입력/출력 예제와 원하시는 호출당 가격만 알려주세요.
+## 청중 3: x402/Base 생태계 (증폭자)
 
-## 30초 영상 촬영
+### English showcase copy
+402-LAB is an open-source MCP buyer prototype with budget checks and an x402 seller proxy. We’re testing whether agents can discover and buy useful indie APIs, starting with a Korean business-status lookup. Testnet receipt and setup: [MCP docs](https://github.com/Kairose-master/handsel-mandate/blob/main/docs/mcp.md). Looking for feedback on Bazaar discovery and seller onboarding.
 
-### 방법 A · 한 줄 자동 녹화 (권장)
+### 제출 위치 메모
+- x402 GitHub: Discussions나 showcase가 실제 열려 있고 관련 게시 규칙이 허용되는 경우에만 게시. 저장소 issue를 토론 게시판처럼 사용하지 않는다.
+- x402 Discord: showcase 채널의 현재 홍보 규칙을 먼저 확인한다.
+- Base 생태계: 공식 앱/빌더 showcase 신청 양식이 열려 있으면 위 문안을 사용한다.
+- 게시 전 위 링크와 테스트넷 tx를 다시 확인하고, 메인넷 문구는 별도의 검증된 tx가 생긴 뒤에만 추가한다.
 
-```
-npm i -D playwright && npx playwright install chromium   # 처음 한 번
-npm run record                                           # 라이브 페이지를 녹화
-```
+## MCP 디렉터리 제출용 설명문
 
-`demo-video/demo.webm`(1280×800, 2배 해상도), `demo.srt`(자막, 아래 대본과 같은 문구·타이밍)가 나옵니다. X·유튜브 업로드용 MP4는 시스템 ffmpeg가 있으면 자동 생성되고, 없으면 `brew install ffmpeg` 후 화면에 나오는 변환 명령을 실행하세요. 한 번 녹화할 때마다 실제 테스트넷 구매 1건(0.01 USDC)이 일어나고 내부 거래로 집계됩니다. 다른 URL을 찍으려면 `npm run record -- https://... out-dir`.
+### Short description
+402-LAB MCP helps an agent discover x402 services and buy within a user-configured budget, returning the purchased result.
 
-자막은 CapCut·iMovie·DaVinci에 `demo.srt`를 불러오거나, 대본 표를 보고 직접 얹으세요. 배경음은 넣지 않아도 됩니다.
+### Long description
+402-LAB is an open-source MCP server prototype for x402 service discovery and purchase. It searches the x402 Bazaar, presents available service details, and checks configured spend limits and seller policies before a purchase. It is an early developer preview: discovery coverage, service quality, refunds, and buyer demand are not guaranteed. Testnet purchase evidence and setup instructions are documented in the repository.
 
-### 방법 B · 직접 녹화
+### Tags
+`payments`, `x402`, `agent-tools`, `procurement`, `budget-controls`
 
-1. 브라우저 창을 1280×800쯤으로, 확대 110%, 북마크 바·다른 탭·확장 아이콘은 숨깁니다. 시크릿 창이 깔끔합니다.
-2. 녹화 시작: macOS는 `⌘⇧5`(화면 일부 선택), Windows는 `Win+Alt+R`. 마이크는 끕니다.
-3. 아래 표 순서대로 스크롤하고 버튼을 한 번만 누릅니다. 결과가 뜬 뒤 3초 머물고, 05 섹션까지 내려가 3초 뒤 정지합니다.
-4. 편집 앱에서 30초 안으로 자르고 자막을 얹은 뒤 1080p MP4(H.264)로 내보냅니다.
+### Submission checklist
+- Repository URL: https://github.com/Kairose-master/handsel-mandate
+- MCP setup: [docs/mcp.md](https://github.com/Kairose-master/handsel-mandate/blob/main/docs/mcp.md)
+- Demo: https://handsel-mandate-demo.vercel.app
+- State clearly that an MCP server is not automatically compatible with every browser agent; client-specific setup may be needed.
+- Do not claim marketplace demand, 15k active buyers, guaranteed savings, or verified mainnet sales.
 
-### 대본
+## 첫 상품 파일럿: 사업자 상태 조회
 
-| 초 | 화면 | 자막 |
-|---|---|---|
-| 0–4 | 데모 페이지 상단, TESTNET 배너 포함 | "바이브 코딩으로 만든 도구 하나" |
-| 4–8 | 01 카드: 도구 이름, 0.01 USDC / 호출 | "가격을 정하고" |
-| 8–12 | 버튼 클릭 | "에이전트가 산다" |
-| 12–22 | 5단계가 차례로 ✓: 발견 → 402 견적 → 예산 확인 → 결제 → 결과 | "발견 → 예산 확인 → 테스트넷 결제 → 결과 수령" |
-| 22–27 | 결과 JSON, (테스트넷 모드면) Basescan 링크 | "결과와 정산 기록" |
-| 27–30 | 05 섹션 "내 도구도 팔고 싶다면" | "엔드포인트 하나만. 개발자 프리뷰" |
+사업자번호의 계속·휴업·폐업 상태를 공식 NTS API에서 조회합니다. 공개 데모 가격은 0.02 USDC/요청이며, 요청당 최대 100개 번호를 받습니다. 이는 테스트할 초기 상품 가설이지, 아직 고객 수요나 데이터 독점성을 증명하지 않습니다. 판매 전 API 키의 이용 조건, 출처 표기, 허용된 상업적 사용을 확인합니다.
 
-자르지 말 것: TESTNET 배너, "보장하지 않습니다" 문구. 넣지 말 것: "x402·AA 통합 플랫폼" 같은 설명.
+구매자가 실제 결과를 필요로 하는지 5명의 한국 자동화/API 개발자와 짧은 인터뷰로 확인합니다. 관심 표현보다 실제 테스트넷 구매 또는 업무에 붙여 다시 쓰는지를 핵심 신호로 봅니다.
 
-## 답변 준비 (자주 나올 질문)
+## 실행 순서 (2주)
 
-- 진짜 돈인가요? → 네. 공개 페이지는 Base 메인넷 실제 USDC로 결제받습니다. 판매자 연결은 테스트넷에서 먼저 하고 메인넷으로 올립니다.
-- 내 코드 고쳐야 하나요? → 아니요. 프록시가 앞에 서고, 결제된 호출만 비밀 헤더와 함께 전달합니다. 그 헤더 없는 호출만 거부해 주시면 됩니다.
-- 구매자는 누가 데려오나요? → 판매자가 자기 사용자에게 링크를 배포하는 것이 기본입니다. 402 응답에 Bazaar 메타데이터가 들어 있어 첫 정산 뒤 x402 Bazaar에 자동으로 실리고, 저희 MCP 클라이언트를 쓰는 에이전트가 거기서 찾습니다.
-- 실패한 호출도 돈이 나가나요? → API가 2xx가 아니면 검증된 결제를 취소합니다. 다만 결과 품질에 대한 환불·에스크로는 없습니다.
-- 성공 기준은? → 외부 판매자 한 명의 도구를 외부 구매자 한 명이 실제로 쓰는 것. 그다음 반복 구매. 우리끼리 돌린 테스트 거래는 따로 셉니다.
+1. 공개 프로필·페이지·저장소에서 402-LAB 이름과 링크를 통일한다. 저장소 slug와 Vercel 프로젝트 이름은 별도 변경 권한이 필요하다.
+2. 제품을 외부에서 직접 호출해 상품 설명, 가격, 현재 네트워크 모드를 확인한다.
+3. 테스트넷에서 판매자/구매자 양쪽 흐름을 각각 확인하고 tx와 역할을 구분해 기록한다.
+4. 30초 데모를 녹화한다. 네트워크 배너, 가격, 결과, 테스트넷 tx를 화면에 포함하고 비밀키·환경변수는 노출하지 않는다.
+5. MCP 디렉터리 제출 양식을 확인해 지원되는 곳에 등록한다. 승인·색인은 별도 상태로 기록한다.
+6. 구매자 글과 판매자 글을 다른 날/채널에 게시한다. 공개 글은 X, 허용되는 커뮤니티, x402/Base showcase에 맞춰 쓴다.
+7. 이미 공개 도구를 만든 개발자 10명에게 개인화된 DM을 보낸다. 대량 자동 발송은 하지 않는다.
+8. 2주 후 설치/호출, 검증된 외부 USDC 결제, 판매자 답장을 점검한다. 반응이 없으면 게시물을 늘리기보다 응답자와 비응답자를 인터뷰한다.
+
+## 측정 기준
+
+- MCP 서버 사용: 설치 수보다 실제 `discover` / `buy` 성공 이벤트를 우선. 현재 이를 독립 분석 서비스로 집계하지 않는다.
+- 외부 결제: Base USDC 컨트랙트에서 구매자 주소, 수취 주소, 금액, tx를 확인하고 내부 주소를 제외한다. 단순 토큰 전송은 API 사용을 증명하지 않으므로 정산/응답 증거와 함께 본다.
+- 판매자 관심: 유효한 답장 수, 테스트넷 연동 완료 수.
+- 조회수와 팔로워는 핵심 지표로 사용하지 않는다.
+
+## 지금 게시하지 않을 주장
+
+- “메인넷에서 실제 USDC를 받고 있다”
+- “외부 구매자가 우리 상품을 샀다”
+- “Bazaar에 1.5만 구매자/고객이 있다”
+- “코드 수정 없이 즉시 판매 가능” (현재 판매자 설정과 검증이 필요함)
+- “결과 품질·환불·수익을 보장한다”
