@@ -28,12 +28,14 @@ const offer = required.accepts.find(a => a.scheme === 'exact' && USDC[a.network]
 if (!offer) { console.error('no exact USDC offer on Base Sepolia or Base mainnet'); process.exit(1); }
 const maxMicro = BigInt(Math.round(Number(max) * 1e6));
 console.log(`quote: ${Number(offer.amount) / 1e6} USDC on ${offer.network} → ${offer.payTo}  (payer ${account.address})`);
+if (offer.payTo.toLowerCase() === account.address.toLowerCase()) console.error('warning: payer and payTo are the same wallet; use a separate buyer wallet');
 if (offer.network === 'eip155:8453' && !allowMainnet) { console.error('MAINNET quote: this would spend real USDC. Re-run with --mainnet to confirm.'); process.exit(3); }
 if (BigInt(offer.amount) > maxMicro) { console.error(`quote ${offer.amount} µUSDC exceeds --max ${max} USDC; refusing`); process.exit(3); }
 
 const client = new x402Client().register(offer.network, new ExactEvmScheme(account));
 const payload = await client.createPaymentPayload({ ...required, accepts: [offer] });
 const paid = await fetch(url, { ...init, headers: { ...init.headers, 'PAYMENT-SIGNATURE': encodePaymentSignatureHeader(payload) } });
+if (paid.status === 402) { const h = paid.headers.get('PAYMENT-REQUIRED'); const reason = h ? decodePaymentRequiredHeader(h).error : null; console.error(`seller rejected the payment${reason ? `: ${reason}` : ''}`); }
 const settlementHeader = paid.headers.get('PAYMENT-RESPONSE');
 const settlement = settlementHeader ? decodePaymentResponseHeader(settlementHeader) : null;
 const text = await paid.text();
