@@ -9,7 +9,7 @@
 **1/**
 바이브 코딩으로 만든 도구, AI 에이전트한테 팔아보고 싶나요?
 
-작동하는 API를 가진 개발자 3명과 첫 판매 흐름을 함께 만듭니다. 코드는 안 고칩니다. 엔드포인트 하나에 결제 게이트를 붙이고, 에이전트가 읽는 상품 설명과 구매 링크를 드립니다.
+작동하는 API가 있으면 누구나 됩니다. 코드는 안 고칩니다. 엔드포인트 하나에 결제 게이트를 붙이고, 에이전트가 읽는 상품 설명과 구매 링크를 드립니다.
 
 👉 https://handsel-mandate-demo.vercel.app
 
@@ -28,7 +28,7 @@ https://github.com/Kairose-master/handsel-mandate/blob/main/docs/mcp.md
 ## X thread (English)
 
 **1/** Built a tool by vibe coding? Let AI agents pay for it per call.
-We're wiring the first sales flow with 3 developers who have a working API. No code changes: one endpoint gets an x402 paywall, an agent-readable product description and a buy link.
+Anyone with a working API can join. No code changes: one endpoint gets an x402 paywall, an agent-readable product description and a buy link.
 👉 https://handsel-mandate-demo.vercel.app
 
 **2/** The loop: agent discovers → checks its budget → pays per call over x402 → gets the result. We ran it end to end on our own tool; it now takes real USDC on Base mainnet. (video)
@@ -40,7 +40,7 @@ Apply (endpoint, example I/O, price): https://github.com/Kairose-master/handsel-
 
 ## 개발자 커뮤니티 글 (홍보가 허용되는 곳)
 
-제목: 바이브 코딩으로 만든 API, 에이전트가 호출당 결제해서 쓰게 연결해 드립니다 (테스트넷, 3명)
+제목: 바이브 코딩으로 만든 API, 에이전트가 호출당 결제해서 쓰게 연결해 드립니다 (개발자 프리뷰)
 
 본문:
 - 무엇: 여러분의 기존 API 앞에 x402 결제 게이트를 세우고, 에이전트가 읽는 상품 설명과 구매 링크를 만들어 드립니다. 코드는 안 고칩니다.
