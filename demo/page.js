@@ -52,7 +52,8 @@ $('run').addEventListener('click', async () => {
     const run = await res.json();
     if (!res.ok) { $('run-status').textContent = run.error ?? `HTTP ${res.status}`; for (const id of ['discover', 'quote', 'budget', 'pay', 'result']) paint(id, ''); return; }
     const seen = new Set();
-    for (const step of run.steps) { seen.add(step.id); paint(step.id, step.status, describe(step)); }
+    // Reveal steps one by one so the flow reads at a glance (and records well).
+    for (const step of run.steps) { seen.add(step.id); paint(step.id, step.status, describe(step)); await new Promise(r => setTimeout(r, 450)); }
     for (const id of ['discover', 'quote', 'budget', 'pay', 'result']) if (!seen.has(id)) paint(id, 'failed', '건너뜀');
     const last = run.steps.at(-1);
     if (last?.id === 'result' && last.status === 'ok') {

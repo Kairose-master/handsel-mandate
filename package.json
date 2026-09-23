@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "demo": "node demo/server.js",
-    "demo:buy": "node demo/agent.js"
+    "demo:buy": "node demo/agent.js",
+    "record": "node scripts/record-demo.js"
   },
   "engines": {
     "node": ">=22"
