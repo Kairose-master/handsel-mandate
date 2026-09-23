@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { appendFile, readFile } from 'node:fs/promises';
 import { x402ResourceServer, x402HTTPResourceServer, HTTPFacilitatorClient } from '@x402/core/server';
 import { createCdpFacilitatorClient } from '@coinbase/cdp-sdk/x402';
-import { declareDiscoveryExtension } from '@x402/extensions/bazaar';
+import { declareDiscoveryExtension, bazaarResourceServerExtension } from '@x402/extensions/bazaar';
 import { ExactEvmScheme } from '@x402/evm/exact/server';
 import { builtinTool } from './upstream.js';
 import { LocalSimulationFacilitator, NETWORK } from './facilitator-local.js';
@@ -109,7 +109,8 @@ export function createDemoServer(options = {}) {
     [`GET ${tool.path}/sample`]: { accepts, resource: `${publicBaseUrl}${tool.path}/sample`, description: `${tool.name} (sample input)`, mimeType: 'application/json', extensions: bazaarDiscovery('GET', tool) },
     [`${tool.method} ${tool.path}`]: { accepts, resource: `${publicBaseUrl}${tool.path}`, description: tool.name, mimeType: 'application/json', extensions: bazaarDiscovery(tool.method, tool) },
   };
-  const paid = new x402HTTPResourceServer(new x402ResourceServer(facilitator).register(network, new ExactEvmScheme()), routes);
+  // The Bazaar server extension enriches the 402 declaration (method, route template); without it the facilitator cannot index the resource.
+  const paid = new x402HTTPResourceServer(new x402ResourceServer(facilitator).register(network, new ExactEvmScheme()).registerExtension(bazaarResourceServerExtension), routes);
   const product = productFor({ publicBaseUrl, price, payTo, mode, tool, network });
 
   async function record(entry) {
