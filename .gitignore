@@ -8,3 +8,4 @@ runtime/*.local.*
 runtime/state.lock/
 demo/*.local.*
 demo-video/
+mcp/*.local.*
