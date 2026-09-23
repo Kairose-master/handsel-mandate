@@ -49,6 +49,9 @@ test('unpaid requests get an x402 v2 quote for Base Sepolia USDC and the product
     assert.equal(res.status, 402);
     const required = decodePaymentRequiredHeader(res.headers.get('PAYMENT-REQUIRED'));
     assert.equal(required.x402Version, 2);
+    assert.equal(required.extensions.bazaar.info.input.type, 'http');
+    assert.deepEqual(required.extensions.bazaar.info.input.queryParams, {});
+    assert.equal(required.extensions.bazaar.info.output.example.format, 'handsel.markdown-tables.v1');
     assert.equal(required.resource.url, `${base}/convert/sample`);
     assert.deepEqual(required.accepts.map(a => [a.scheme, a.network, a.asset.toLowerCase(), a.amount, a.payTo, a.extra.name, a.extra.version]), [['exact', 'eip155:84532', '0x036cbd53842c5426634e7929541ec2318f3dcf7e', '10000', PAY_TO, 'USDC', '2']]);
     const product = await (await fetch(`${base}/product.json`)).json();
@@ -86,7 +89,10 @@ test('an external x402 client pays for POST /convert and is counted separately',
   const { demo, base } = await start({ agentKey: generatePrivateKey() });
   try {
     const buyer = generatePrivateKey();
-    const { payload, response } = await payWith(buyer, `${base}/convert`, { method: 'POST', body: JSON.stringify({ markdown: '| k | v |\n|---|---|\n| price | 0.01 |' }) });
+    const { required, payload, response } = await payWith(buyer, `${base}/convert`, { method: 'POST', body: JSON.stringify({ markdown: '| k | v |\n|---|---|\n| price | 0.01 |' }) });
+    assert.equal(required.extensions.bazaar.info.input.bodyType, 'json');
+    assert.equal(required.extensions.bazaar.info.input.body.markdown, '| a | b |\n|---|---|\n| 1 | 2 |');
+    assert.equal(required.extensions.bazaar.info.output.example.format, 'handsel.markdown-tables.v1');
     assert.equal(response.status, 200);
     assert.deepEqual((await response.json()).tables, [{ columns: ['k', 'v'], rows: [['price', '0.01']] }]);
     const settlement = decodePaymentResponseHeader(response.headers.get('PAYMENT-RESPONSE'));
