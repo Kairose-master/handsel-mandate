@@ -4,6 +4,7 @@
 import { createServer } from 'node:http';
 import { appendFile, readFile } from 'node:fs/promises';
 import { x402ResourceServer, x402HTTPResourceServer, HTTPFacilitatorClient } from '@x402/core/server';
+import { declareDiscoveryExtension } from '@x402/extensions/bazaar';
 import { ExactEvmScheme } from '@x402/evm/exact/server';
 import { builtinTool } from './upstream.js';
 import { LocalSimulationFacilitator, NETWORK } from './facilitator-local.js';
@@ -41,6 +42,25 @@ function adapterFor(req, url) {
   const headers = req.headers;
   return { getHeader: name => { const v = headers[name.toLowerCase()]; return Array.isArray(v) ? v[0] : v; }, getMethod: () => req.method ?? 'GET', getPath: () => url.pathname, getUrl: () => url.href, getAcceptHeader: () => String(headers.accept ?? ''), getUserAgent: () => String(headers['user-agent'] ?? ''), getQueryParams: () => Object.fromEntries(url.searchParams), getQueryParam: name => url.searchParams.get(name) ?? undefined };
 }
+function jsonSchemaFor(example) {
+  if (Array.isArray(example)) return { type: 'array', items: example.length ? jsonSchemaFor(example[0]) : {} };
+  if (example === null) return { type: 'null' };
+  if (typeof example === 'object') return { type: 'object', properties: Object.fromEntries(Object.entries(example).map(([key, value]) => [key, jsonSchemaFor(value)])) };
+  return { type: typeof example };
+}
+
+function bazaarDiscovery(method, tool) {
+  const input = method === 'GET' ? {} : (tool.exampleRequest ?? {});
+  const properties = Object.fromEntries(Object.entries(input).map(([key, value]) => [key, { ...jsonSchemaFor(value), description: key === 'markdown' ? 'Markdown document that may contain GitHub Flavored Markdown tables' : `Example value for ${key}` }]));
+  const output = tool.exampleResponse ?? {};
+  return declareDiscoveryExtension({
+    input,
+    inputSchema: { type: 'object', properties, ...(Object.keys(properties).length ? { required: Object.keys(properties) } : {}) },
+    ...(method === 'GET' ? {} : { bodyType: 'json' }),
+    output: { example: output, schema: jsonSchemaFor(output) },
+  });
+}
+
 export function createDemoServer(options = {}) {
   const mode = options.mode ?? 'local';
   const tool = options.tool ?? builtinTool();
@@ -77,8 +97,8 @@ export function createDemoServer(options = {}) {
 
   const accepts = { scheme: 'exact', network: NETWORK, price: `$${price}`, payTo, maxTimeoutSeconds: 60 };
   const routes = {
-    [`GET ${tool.path}/sample`]: { accepts, resource: `${publicBaseUrl}${tool.path}/sample`, description: `${tool.name} (sample input)`, mimeType: 'application/json' },
-    [`${tool.method} ${tool.path}`]: { accepts, resource: `${publicBaseUrl}${tool.path}`, description: tool.name, mimeType: 'application/json' },
+    [`GET ${tool.path}/sample`]: { accepts, resource: `${publicBaseUrl}${tool.path}/sample`, description: `${tool.name} (sample input)`, mimeType: 'application/json', extensions: bazaarDiscovery('GET', tool) },
+    [`${tool.method} ${tool.path}`]: { accepts, resource: `${publicBaseUrl}${tool.path}`, description: tool.name, mimeType: 'application/json', extensions: bazaarDiscovery(tool.method, tool) },
   };
   const paid = new x402HTTPResourceServer(new x402ResourceServer(facilitator).register(NETWORK, new ExactEvmScheme()), routes);
   const product = productFor({ publicBaseUrl, price, payTo, mode, tool });
