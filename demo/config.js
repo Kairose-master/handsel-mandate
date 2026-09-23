@@ -13,7 +13,7 @@ export function configFromEnv(env = process.env) {
     price: env.PRODUCT_PRICE ?? draft?.price ?? '0.01',
     payTo: env.SELLER_PAY_TO ?? draft?.payTo ?? (mode === 'local' ? '0x1111111111111111111111111111111111111111' : undefined),
     facilitatorUrl: env.X402_FACILITATOR_URL,
-    rpcUrl: env.BASE_SEPOLIA_RPC,
+    rpcUrl: mode === 'mainnet' ? env.BASE_MAINNET_RPC : env.BASE_SEPOLIA_RPC,
     agentKey: env.DEMO_AGENT_KEY,
     demoTotal: env.DEMO_TOTAL ?? '0.10',
     demoRunsPerHour: Number(env.DEMO_RUNS_PER_HOUR ?? 20),
