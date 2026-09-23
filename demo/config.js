@@ -1,13 +1,15 @@
 // Shared environment parsing for `node demo/server.js` and the Vercel handler.
 import { readFileSync } from 'node:fs';
 import { productDraftToUpstream, upstreamTool } from './upstream.js';
+import { ntsTool } from './tools/nts.js';
 
 export function configFromEnv(env = process.env) {
   const mode = env.DEMO_MODE ?? 'local';
   let draft = null;
   if (env.PRODUCT_FILE) draft = productDraftToUpstream(JSON.parse(readFileSync(env.PRODUCT_FILE, 'utf8')), { secret: env.UPSTREAM_SECRET });
   const upstreamUrl = env.UPSTREAM_URL ?? draft?.url;
-  const tool = upstreamUrl ? upstreamTool({ url: upstreamUrl, method: env.UPSTREAM_METHOD ?? draft?.method ?? 'POST', secret: env.UPSTREAM_SECRET, name: env.PRODUCT_NAME ?? draft?.name, description: env.PRODUCT_DESCRIPTION ?? draft?.description, exampleRequest: env.PRODUCT_EXAMPLE_REQUEST ? JSON.parse(env.PRODUCT_EXAMPLE_REQUEST) : draft?.exampleRequest, exampleResponse: env.PRODUCT_EXAMPLE_RESPONSE ? JSON.parse(env.PRODUCT_EXAMPLE_RESPONSE) : draft?.exampleResponse }) : undefined;
+  // Product selection: a seller's upstream API, else our 국세청 status product when its key is set, else the built-in converter.
+  const tool = upstreamUrl ? upstreamTool({ url: upstreamUrl, method: env.UPSTREAM_METHOD ?? draft?.method ?? 'POST', secret: env.UPSTREAM_SECRET, name: env.PRODUCT_NAME ?? draft?.name, description: env.PRODUCT_DESCRIPTION ?? draft?.description, exampleRequest: env.PRODUCT_EXAMPLE_REQUEST ? JSON.parse(env.PRODUCT_EXAMPLE_REQUEST) : draft?.exampleRequest, exampleResponse: env.PRODUCT_EXAMPLE_RESPONSE ? JSON.parse(env.PRODUCT_EXAMPLE_RESPONSE) : draft?.exampleResponse }) : env.NTS_SERVICE_KEY ? ntsTool({ serviceKey: env.NTS_SERVICE_KEY }) : undefined;
   return {
     mode, tool,
     price: env.PRODUCT_PRICE ?? draft?.price ?? '0.01',
