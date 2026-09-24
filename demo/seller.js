@@ -106,8 +106,9 @@ export function createDemoServer(options = {}) {
 
   const accepts = { scheme: 'exact', network, asset, price: `$${price}`, payTo, maxTimeoutSeconds: 60 };
   const routes = {
-    [`GET ${tool.path}/sample`]: { accepts, resource: `${publicBaseUrl}${tool.path}/sample`, description: `${tool.name} (sample input)`, mimeType: 'application/json', extensions: bazaarDiscovery('GET', tool) },
-    [`${tool.method} ${tool.path}`]: { accepts, resource: `${publicBaseUrl}${tool.path}`, description: tool.name, mimeType: 'application/json', extensions: bazaarDiscovery(tool.method, tool) },
+    // serviceName (≤32 ASCII) and tags feed Bazaar search; description carries the bilingual product text.
+    [`GET ${tool.path}/sample`]: { accepts, resource: `${publicBaseUrl}${tool.path}/sample`, description: `${tool.description} (sample input)`.slice(0, 500), mimeType: 'application/json', ...(tool.serviceName ? { serviceName: tool.serviceName } : {}), ...(tool.tags ? { tags: tool.tags } : {}), extensions: bazaarDiscovery('GET', tool) },
+    [`${tool.method} ${tool.path}`]: { accepts, resource: `${publicBaseUrl}${tool.path}`, description: String(tool.description).slice(0, 500), mimeType: 'application/json', ...(tool.serviceName ? { serviceName: tool.serviceName } : {}), ...(tool.tags ? { tags: tool.tags } : {}), extensions: bazaarDiscovery(tool.method, tool) },
   };
   // The Bazaar server extension enriches the 402 declaration (method, route template); without it the facilitator cannot index the resource.
   const paid = new x402HTTPResourceServer(new x402ResourceServer(facilitator).register(network, new ExactEvmScheme()).registerExtension(bazaarResourceServerExtension), routes);
@@ -147,7 +148,10 @@ export function createDemoServer(options = {}) {
     }
     const settlement = await paid.processSettlement(outcome.paymentPayload, outcome.paymentRequirements, outcome.declaredExtensions, { request: context, responseBody: output.body });
     if (!settlement.success) { log('settle-failed', settlement.errorReason); return sendInstructions(res, settlement.response); }
-    await record({ route: `${req.method} ${url.pathname}`, payer: settlement.payer ?? payer, amount: outcome.paymentRequirements.amount, transaction: settlement.transaction, network: settlement.network });
+    // The facilitator reports Bazaar cataloging (success / processing / rejected + rejectedReason) per settlement.
+    const bazaar = settlement.extensionResponses?.bazaar ?? null;
+    if (bazaar) log('bazaar', JSON.stringify(bazaar));
+    await record({ route: `${req.method} ${url.pathname}`, payer: settlement.payer ?? payer, amount: outcome.paymentRequirements.amount, transaction: settlement.transaction, network: settlement.network, bazaar });
     res.writeHead(200, { ...settlement.headers, 'Content-Type': output.contentType, 'Content-Length': output.body.length, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store', 'Access-Control-Expose-Headers': 'PAYMENT-REQUIRED, PAYMENT-RESPONSE' });
     res.end(output.body);
   }
@@ -178,7 +182,7 @@ export function createDemoServer(options = {}) {
       if (method === tool.method && url.pathname === tool.path) return await handlePaid(req, res, url, ctx => tool.run(req, ctx));
       if (method === 'GET' && url.pathname === '/product.json') return send(res, 200, product, { 'Access-Control-Allow-Origin': '*' });
       if (method === 'GET' && url.pathname === '/health') return send(res, 200, { ok: true, mode, network, testnet: mode !== 'mainnet' });
-      if (method === 'GET' && url.pathname === '/demo/status') return send(res, 200, { mode, testnet: mode !== 'mainnet', network, product: { name: product.name, description: product.description, price, payTo, endpoint: `${publicBaseUrl}${tool.path}/sample`, mainEndpoint: `${tool.method} ${publicBaseUrl}${tool.path}`, proxiedUpstream: !tool.builtin }, agent: agent ? { address: agent.address, budget: agent.budget(), funding: await agentFunding() } : null, purchases: { external: ledger.external, internal: ledger.internal, note: '서버 데모 에이전트와 등록된 내부 주소의 구매는 internal로 따로 셉니다.' }, recent: ledger.entries.slice(-10).map(e => ({ at: e.at, route: e.route, amount: e.amount, transaction: e.transaction, internal: e.internal, explorer: mode === 'testnet' && /^0x[0-9a-fA-F]{64}$/.test(e.transaction ?? '') ? `${BASESCAN.testnet}${e.transaction}` : mode === 'mainnet' && /^0x[0-9a-fA-F]{64}$/.test(e.transaction ?? '') ? `${BASESCAN.mainnet}${e.transaction}` : null })) });
+      if (method === 'GET' && url.pathname === '/demo/status') return send(res, 200, { mode, testnet: mode !== 'mainnet', network, product: { name: product.name, description: product.description, price, payTo, endpoint: `${publicBaseUrl}${tool.path}/sample`, mainEndpoint: `${tool.method} ${publicBaseUrl}${tool.path}`, proxiedUpstream: !tool.builtin }, agent: agent ? { address: agent.address, budget: agent.budget(), funding: await agentFunding() } : null, purchases: { external: ledger.external, internal: ledger.internal, note: '서버 데모 에이전트와 등록된 내부 주소의 구매는 internal로 따로 셉니다.' }, recent: ledger.entries.slice(-10).map(e => ({ at: e.at, route: e.route, amount: e.amount, transaction: e.transaction, internal: e.internal, bazaar: e.bazaar ?? null, explorer: mode === 'testnet' && /^0x[0-9a-fA-F]{64}$/.test(e.transaction ?? '') ? `${BASESCAN.testnet}${e.transaction}` : mode === 'mainnet' && /^0x[0-9a-fA-F]{64}$/.test(e.transaction ?? '') ? `${BASESCAN.mainnet}${e.transaction}` : null })) });
       if (method === 'POST' && url.pathname === '/demo/run') return await handleDemoRun(res);
       const page = method === 'GET' || method === 'HEAD' ? PAGE_FILES.get(url.pathname) : undefined;
       if (page) {
