@@ -132,3 +132,24 @@ test('catalog normalizes real Bazaar listings and buys can use query parameters'
   assert.throws(() => wallet.check({ ...quote, accepts: [{ ...quote.accepts[0], extra: { name: 'USDC', version: '2' } }] }, quote.resource.url, m), /token domain/);
   assert.throws(() => wallet.check({ ...quote, accepts: [{ ...quote.accepts[0], extra: { name: 'USD Coin', version: '2', paymentFlow: 'upfront' } }] }, quote.resource.url, m), /payment flow/);
 });
+
+test('MCPB manifest, registry template and Cursor config agree with the server', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const src = await readFile(new URL('../mcp/server.js', import.meta.url), 'utf8');
+  const manifest = JSON.parse(await readFile(new URL('../mcp/manifest.json', import.meta.url), 'utf8'));
+  const registry = JSON.parse(await readFile(new URL('../mcp/server.registry.json', import.meta.url), 'utf8'));
+  const cursor = JSON.parse(await readFile(new URL('../.cursor/mcp.json', import.meta.url), 'utf8'));
+  const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  const registered = [...src.matchAll(/registerTool\('([a-z_]+)'/g)].map(m => m[1]);
+  assert.deepEqual(manifest.tools.map(t => t.name).sort(), registered.sort(), 'manifest lists exactly the registered tools');
+  const envUsed = new Set([...src.matchAll(/env\.([A-Z_]+)/g)].map(m => m[1]));
+  for (const name of Object.keys(manifest.server.mcp_config.env)) assert.ok(envUsed.has(name), `manifest env ${name} is read by server.js`);
+  for (const ref of Object.values(manifest.server.mcp_config.env)) { const m = ref.match(/\$\{user_config\.(\w+)\}/); if (m) assert.ok(manifest.user_config[m[1]], `user_config.${m[1]} declared`); }
+  assert.ok(manifest.user_config.buyer_private_key.sensitive && manifest.user_config.buyer_private_key.required);
+  assert.equal(manifest.version, registry.version); assert.equal(registry.packages[0].version, manifest.version);
+  assert.ok(registry.description.length <= 100);
+  assert.match(registry.packages[0].identifier, /^https:\/\/github\.com\/Kairose-master\/handsel-mandate\/releases\/download\//);
+  for (const v of registry.packages[0].environmentVariables) assert.ok(envUsed.has(v.name), `registry env ${v.name} is read by server.js`);
+  for (const name of Object.keys(cursor.mcpServers['402-lab'].env)) assert.ok(envUsed.has(name), `cursor env ${name}`);
+  assert.equal(pkg.bin['402-lab-mcp'], 'mcp/server.js'); assert.match(src, /^#!\/usr\/bin\/env node/);
+});

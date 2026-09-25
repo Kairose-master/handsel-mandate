@@ -1,0 +1,126 @@
+{
+  "manifest_version": "0.3",
+  "name": "402-lab",
+  "display_name": "402-LAB — budget-capped x402 buyer",
+  "version": "0.1.0",
+  "description": "Delegate a USDC budget in plain words; the agent finds x402 tools (Bazaar + seller catalogs), pays per call inside the cap, returns only the result.",
+  "long_description": "402-LAB turns \"do this within $1\" into a hard spending limit. The human states a budget, the agent calls `mandate_create`, then `discover` (x402 Bazaar with ~15k listed resources, plus any seller `product.json`) and `buy`. Every payment is an x402 exact EIP-3009 USDC authorization signed by the wallet key that stays on this machine. The server, not the model, enforces the total cap, the per-call cap, the network, the USDC asset and the optional seller allow-list; reservations are written before signing and a `request_id` is never paid twice. Testnet (Base Sepolia) by default; set `network` to `eip155:8453` for Base mainnet with real USDC.",
+  "author": {
+    "name": "402-LAB",
+    "url": "https://handsel-mandate-demo.vercel.app"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kairose-master/handsel-mandate.git"
+  },
+  "homepage": "https://handsel-mandate-demo.vercel.app",
+  "documentation": "https://github.com/Kairose-master/handsel-mandate/blob/main/docs/mcp.md",
+  "support": "https://github.com/Kairose-master/handsel-mandate/issues",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "server.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server.js"
+      ],
+      "env": {
+        "BUYER_PRIVATE_KEY": "${user_config.buyer_private_key}",
+        "NETWORK": "${user_config.network}",
+        "MANDATE_MAX_USDC": "${user_config.max_usdc}",
+        "MANDATE_MAX_MINUTES": "${user_config.max_minutes}",
+        "CATALOG_URLS": "${user_config.catalog_urls}",
+        "STATE_PATH": "${HOME}/.402-lab/state.json"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "mandate_status",
+      "description": "Current delegated budget: total, per-call cap, spent, remaining, expiry."
+    },
+    {
+      "name": "mandate_create",
+      "description": "Record the budget the human just delegated (total USDC, per-call cap, minutes, allowed sellers). Rejected above the configured maximum."
+    },
+    {
+      "name": "mandate_revoke",
+      "description": "Stop all further spending under the current mandate immediately."
+    },
+    {
+      "name": "discover",
+      "description": "Search x402 Bazaar and seller catalogs for payable tools on the configured network."
+    },
+    {
+      "name": "buy",
+      "description": "Verify one x402 quote against the mandate, reserve, sign, pay and return the tool result."
+    },
+    {
+      "name": "receipts",
+      "description": "All purchases under this wallet with settlement transaction links."
+    }
+  ],
+  "keywords": [
+    "x402",
+    "usdc",
+    "base",
+    "agent payments",
+    "bazaar",
+    "budget",
+    "mandate",
+    "pay-per-call"
+  ],
+  "privacy_policies": [
+    "https://github.com/Kairose-master/handsel-mandate/blob/main/docs/terms.md"
+  ],
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=22.0.0"
+    }
+  },
+  "user_config": {
+    "buyer_private_key": {
+      "type": "string",
+      "title": "Buyer wallet private key",
+      "description": "0x-prefixed private key of the wallet that pays. Keep only small amounts in it (at most the mandate cap). Never leaves this machine.",
+      "sensitive": true,
+      "required": true
+    },
+    "network": {
+      "type": "string",
+      "title": "Network",
+      "description": "eip155:84532 = Base Sepolia (test USDC, default). eip155:8453 = Base mainnet (real USDC).",
+      "default": "eip155:84532",
+      "required": false
+    },
+    "max_usdc": {
+      "type": "string",
+      "title": "Absolute spending cap (USDC)",
+      "description": "No mandate may exceed this total, whatever the model asks for.",
+      "default": "1",
+      "required": false
+    },
+    "max_minutes": {
+      "type": "number",
+      "title": "Maximum mandate lifetime (minutes)",
+      "default": 60,
+      "min": 1,
+      "max": 1440,
+      "required": false,
+      "description": "A mandate expires after this many minutes; the model cannot ask for more."
+    },
+    "catalog_urls": {
+      "type": "string",
+      "title": "Seller catalog URLs",
+      "description": "Comma-separated product.json URLs searched in addition to the x402 Bazaar.",
+      "default": "https://handsel-mandate-demo.vercel.app/product.json",
+      "required": false
+    }
+  }
+}

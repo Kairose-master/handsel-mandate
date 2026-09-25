@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "402-lab": {
+      "command": "node",
+      "args": [
+        "${workspaceFolder}/mcp/server.js"
+      ],
+      "env": {
+        "BUYER_PRIVATE_KEY": "${env:BUYER_PRIVATE_KEY}",
+        "NETWORK": "eip155:84532",
+        "MANDATE_MAX_USDC": "1"
+      }
+    }
+  }
+}
