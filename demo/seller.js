@@ -25,7 +25,7 @@ export function usdcBalanceReader(rpcUrl = 'https://sepolia.base.org', mode = 't
   return address => client.readContract({ address: token, abi: parseAbi(['function balanceOf(address) view returns (uint256)']), functionName: 'balanceOf', args: [address] });
 }
 
-const PAGE_FILES = new Map([['/', ['page.html', 'text/html']], ['/page.js', ['page.js', 'text/javascript']], ['/page.css', ['page.css', 'text/css']]]);
+const PAGE_FILES = new Map([['/', ['page.html', 'text/html']], ['/page.js', ['page.js', 'text/javascript']], ['/page.css', ['page.css', 'text/css']], ['/assets/hero.png', ['assets/hero.png', 'image/png']], ['/favicon.svg', ['favicon.svg', 'image/svg+xml']]]);
 const same = (a, b) => typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
 
 export function productFor({ publicBaseUrl, price, payTo, mode, tool, network = mode === 'mainnet' ? MAINNET_NETWORK : NETWORK }) {
@@ -187,7 +187,7 @@ export function createDemoServer(options = {}) {
       const page = method === 'GET' || method === 'HEAD' ? PAGE_FILES.get(url.pathname) : undefined;
       if (page) {
         const body = await readFile(new URL(`./${page[0]}`, import.meta.url));
-        res.writeHead(200, { 'Content-Type': `${page[1]}; charset=utf-8`, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store', 'Content-Security-Policy': "default-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'" });
+        res.writeHead(200, { 'Content-Type': page[1].startsWith('image/') ? page[1] : `${page[1]}; charset=utf-8`, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': page[1].startsWith('image/') ? 'public, max-age=31536000, immutable' : 'no-store', 'Content-Security-Policy': "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'" });
         return res.end(method === 'HEAD' ? undefined : body);
       }
       send(res, 404, { error: 'Not found' });

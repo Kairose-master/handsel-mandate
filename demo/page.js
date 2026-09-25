@@ -5,24 +5,23 @@ async function loadStatus() {
   const res = await fetch('./demo/status', { cache: 'no-store' });
   status = await res.json();
   const mainnet = status.mode === 'mainnet';
-  $('network-banner').className = mainnet ? 'mainnet' : 'testnet';
-  $('network-banner').textContent = mainnet ? '⚠ MAINNET · Base (eip155:8453) · 실제 USDC 결제가 발생합니다.' : status.mode === 'testnet' ? '⚠ TESTNET · Base Sepolia (eip155:84532) · 테스트용 USDC만 사용됩니다. 실제 돈이 오가지 않습니다.' : 'LOCAL SIMULATION · 체인 미사용 · 실제 돈이 오가지 않습니다.';
-  $('mode-badge').textContent = mainnet ? 'Base 메인넷 · 실제 USDC 정산' : status.mode === 'testnet' ? 'Base Sepolia 테스트넷 · 실제 테스트넷 정산' : '로컬 시뮬레이션 · 체인 미사용';
-  document.title = mainnet ? '에이전트 구매 데모 · Base 메인넷' : status.mode === 'testnet' ? '에이전트 구매 데모 · Base Sepolia 테스트넷' : '에이전트 구매 데모 · 로컬 시뮬레이션';
-  $('price-label').textContent = mainnet ? ' USDC / 호출 · 실제 결제' : status.mode === 'testnet' ? ' USDC / 호출 · 테스트넷' : ' USDC / 호출 · 시뮬레이션';
+  $('network-banner').className = `network-banner ${mainnet ? 'mainnet' : status.mode === 'testnet' ? 'testnet' : ''}`;
+  $('network-banner').textContent = mainnet ? 'LIVE · BASE MAINNET · 실제 USDC 결제가 가능합니다. 구매 전 가격과 네트워크를 확인하세요.' : status.mode === 'testnet' ? 'TESTNET · BASE SEPOLIA · 테스트용 USDC만 사용됩니다. 실제 돈이 오가지 않습니다.' : 'LOCAL SIMULATION · 체인 미사용 · 실제 돈이 오가지 않습니다.';
+  $('mode-badge').textContent = mainnet ? '실서비스 · 메인넷 결제 지원' : status.mode === 'testnet' ? 'Base Sepolia 테스트넷' : '로컬 시뮬레이션 · 체인 미사용';
+  $('product-status').textContent = mainnet ? 'ONLINE · BASE MAINNET' : status.mode === 'testnet' ? 'TESTNET · BASE SEPOLIA' : 'LOCAL SIMULATION';
+  $('product-network').textContent = mainnet ? 'Base Mainnet' : status.mode === 'testnet' ? 'Base Sepolia' : 'Local Simulation';
+  $('live-price').textContent = `${status.product.price} USDC`;
+  document.title = mainnet ? '402-LAB — Base 메인넷 USDC 에이전트 커머스' : status.mode === 'testnet' ? '402-LAB — Base Sepolia 테스트넷 프리뷰' : '402-LAB — 로컬 시뮬레이션';
+  $('price-label').textContent = mainnet ? 'USDC / 요청 · 메인넷' : status.mode === 'testnet' ? 'USDC / 요청 · 테스트넷' : 'USDC / 요청 · 시뮬레이션';
   $('payment-step-title').textContent = mainnet ? '메인넷 결제' : status.mode === 'testnet' ? '테스트넷 결제' : '시뮬레이션 결제';
-  $('launch-hint').textContent = mainnet ? '메인넷 파일럿 · 실제 USDC 결제 · 구매자 유입이나 매출을 보장하지 않습니다' : status.mode === 'testnet' ? '개발자 프리뷰 · 테스트넷 · 구매자 유입이나 매출을 보장하지 않습니다' : '개발자 프리뷰 · 로컬 시뮬레이션';
-  $('seller-pilot-hint').textContent = mainnet ? '현재 메인넷 파일럿입니다. 구매자 유입·환불·매출을 보장하지 않습니다.' : status.mode === 'testnet' ? 'Base Sepolia 테스트넷 파일럿입니다. 실제 사용자·구매 수요는 아직 검증되지 않았습니다.' : '로컬 시뮬레이션입니다. 실제 결제는 일어나지 않습니다.';
-  $('scope-copy').textContent = mainnet ? '범위 · Base 메인넷에서 x402 exact USDC 결제를 받습니다. 이 데모 에이전트는 실제 자금 자동 지출을 막기 위해 비활성화되어 있으며, Handsel의 온체인 위임 경로는 사용하지 않습니다.' : '범위 · 테스트넷과 로컬 시뮬레이션은 실제 자금이 오가지 않습니다. Handsel의 온체인 위임 경로는 사용하지 않습니다.';
-  $('risk-copy').textContent = mainnet ? '메인넷 구매는 실제 USDC를 판매자 주소로 정산하며 환불·에스크로는 없습니다. 판매 성과나 구매자 유입을 보장하지 않습니다.' : '메인넷 결제, 환불, 에스크로, 판매자 로그인은 아직 없습니다. 판매 성과나 구매자 유입을 보장하지 않습니다.';
+  $('scope-copy').textContent = mainnet ? '운영 네트워크 · Base Mainnet (eip155:8453). x402 결제는 판매자 수취 주소로 직접 정산됩니다. 이 API 구매 화면은 실제 USDC를 사용할 수 있으므로, 지갑에서 가격·토큰·네트워크를 확인한 뒤 서명하세요.' : '운영 네트워크 · 테스트넷과 로컬 시뮬레이션은 실제 자금이 오가지 않습니다.';
+  $('risk-copy').textContent = mainnet ? '이 결제에는 에스크로나 자동 환불이 포함되지 않습니다. API 응답, 가격, 판매자 주소를 확인한 후 직접 결제를 승인하세요.' : '현재 표시된 네트워크에서는 실제 자금이 이동하지 않습니다.';
   $('product-name').textContent = status.product.name;
   $('product-description').textContent = status.product.description ?? '';
   $('product-price').textContent = status.product.price;
   $('product-endpoint').textContent = `GET ${status.product.endpoint}`;
   $('product-payto').textContent = status.product.payTo;
   $('curl-example').textContent = `curl -i ${status.product.endpoint}\n# → HTTP/1.1 402 Payment Required\n# → PAYMENT-REQUIRED: <base64 x402 v2 quote: exact · ${status.network} · USDC · ${status.product.price}>`;
-  $('count-external').textContent = status.purchases.external;
-  $('count-internal').textContent = status.purchases.internal;
   const info = $('agent-info'); info.replaceChildren();
   if (mainnet) { $('run').closest('section').hidden = true; }
   if (status.agent) {
@@ -37,7 +36,6 @@ async function loadStatus() {
       $('run-status').replaceChildren(`데모 에이전트 지갑에 테스트넷 USDC가 없습니다. 아래 주소에 Base Sepolia USDC를 보내면 버튼이 켜집니다: ${f.address} · `, Object.assign(document.createElement('a'), { href: f.faucet, textContent: 'Circle 테스트넷 faucet', target: '_blank', rel: 'noopener' }));
     } else $('run').disabled = false;
   } else { $('run').disabled = true; $('run-status').textContent = '이 서버에는 데모 에이전트 키가 없습니다. 오른쪽 curl 예제로 직접 구매하세요.'; }
-  if (status.recent?.length) { $('recent').hidden = false; $('recent').textContent = status.recent.map(r => `${r.at}  ${r.route}  ${r.amount} µUSDC  ${r.internal ? '[internal]' : '[EXTERNAL]'}  ${r.explorer ?? r.transaction ?? ''}`).join('\n'); }
 }
 function paint(id, state, detail) {
   const li = document.querySelector(`li[data-step="${id}"]`); if (!li) return;
