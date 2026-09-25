@@ -39,6 +39,7 @@ export function ntsTool({ serviceKey, fetcher = fetch, upstream = UPSTREAM } = {
     terms: { dataSource: '국세청 사업자등록정보 상태조회 (공공데이터포털, 이용허락범위 제한 없음)', maxItemsPerCall: MAX_NUMBERS, upstreamQuota: '100 items per call, 1,000,000 per day (shared)', inputs: 'business registration numbers only; not stored or logged' },
     method: 'POST', path: '/biz/status', builtin: true,
     exampleRequest: NTS_EXAMPLE_REQUEST, exampleResponse: NTS_EXAMPLE_RESPONSE,
+    sampleDescription: '예제 사업자등록번호 1건(1248100998)의 국세청 상태를 조회합니다. 입력이 없어 GET 전용 x402 클라이언트도 구매할 수 있습니다.',
     runSample: () => lookup(NTS_EXAMPLE_REQUEST.b_no),
     run: async req => { const parsed = await readJson(req); return lookup(normalizeNumbers(parsed?.b_no)); },
   };
