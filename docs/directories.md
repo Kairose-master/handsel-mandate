@@ -5,8 +5,8 @@
 | 대상 | 저장소 안 파일 | 사람이 할 일 |
 |---|---|---|
 | MCPB 번들(공통 산출물) | `mcp/manifest.json`, `scripts/build-mcpb.sh` | `npm run build:mcpb` → `dist/402-lab.mcpb` |
-| GitHub Release | — | 태그 `mcp-v0.1.0`에 `dist/402-lab.mcpb` 첨부 |
-| 공식 MCP Registry | `mcp/server.registry.json` → `dist/server.json` | `mcp-publisher login github` → `publish` |
+| GitHub Release | `.github/workflows/release-mcp.yml` | 자동 (main 푸시) |
+| 공식 MCP Registry | `mcp/server.registry.json` → `dist/server.json` | 자동 (같은 워크플로, OIDC) |
 | Smithery | 위 번들 | smithery.ai/new 에서 Local(MCPB) 업로드 |
 | mcp.so | — | 제출 폼에 저장소 URL + 아래 문안 |
 | Cursor | `.cursor/mcp.json`, README의 Add to Cursor 버튼 | cursor.com/mcp 제출 |
@@ -24,27 +24,21 @@ npm run build:mcpb
 
 번들 안에는 `mcp/*.js` 세 파일과 런타임 의존성만 들어가고 지갑 키는 들어가지 않습니다. 설치하는 사람이 자기 키를 넣습니다(`user_config.buyer_private_key`, 민감 값으로 표시되어 OS 키체인에 저장).
 
-## 1. GitHub Release
+## 1–2. GitHub Release와 공식 MCP Registry (자동)
 
-1. https://github.com/Kairose-master/handsel-mandate/releases/new
-2. Tag `mcp-v0.1.0`, 제목 "402-LAB buyer MCP 0.1.0"
-3. `dist/402-lab.mcpb` 첨부 후 Publish.
-4. 첨부 URL이 정확히 `https://github.com/Kairose-master/handsel-mandate/releases/download/mcp-v0.1.0/402-lab.mcpb` 인지 확인합니다. `dist/server.json`이 이 URL과 sha256을 가리킵니다.
+`.github/workflows/release-mcp.yml`이 main에 `mcp/**`가 푸시될 때마다 실행됩니다.
 
-버전을 올릴 때는 `mcp/manifest.json`과 `mcp/server.registry.json`의 version·identifier를 같이 바꾸고 다시 빌드합니다.
+1. `mcp/manifest.json`의 version을 읽어 `mcp-v<version>` 릴리스가 없으면 번들을 빌드하고 릴리스를 만들어 `402-lab.mcpb`와 `server.json`을 첨부합니다.
+2. 같은 잡이 GitHub OIDC로 `mcp-publisher login github-oidc` → `publish` 해서 `io.github.kairose-master/402-lab`을 레지스트리에 올립니다. npm 계정도 토큰도 필요 없습니다.
+3. 이미 릴리스된 버전은 건드리지 않습니다. 새로 배포하려면 `mcp/manifest.json`과 `mcp/server.registry.json`의 version(과 identifier의 `mcp-v…`)을 함께 올리고 main에 머지합니다. 테스트가 두 파일의 버전 일치를 검사합니다.
 
-## 2. 공식 MCP Registry (registry.modelcontextprotocol.io)
+결과 링크
+- 릴리스: https://github.com/Kairose-master/handsel-mandate/releases/tag/mcp-v0.1.0
+- 번들 직링크: https://github.com/Kairose-master/handsel-mandate/releases/download/mcp-v0.1.0/402-lab.mcpb
+- 레지스트리 조회: https://registry.modelcontextprotocol.io/v0/servers?search=io.github.kairose-master/402-lab
+- 실행 로그: https://github.com/Kairose-master/handsel-mandate/actions/workflows/release-mcp.yml
 
-```bash
-# macOS/Linux
-curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher && sudo mv mcp-publisher /usr/local/bin/
-cd dist
-mcp-publisher validate      # server.json 검사
-mcp-publisher login github  # 기기 코드 인증. Kairose-master 계정으로
-mcp-publisher publish
-```
-
-이름 `io.github.kairose-master/402-lab`은 GitHub 로그인으로 소유권이 검증됩니다. 패키지 형식은 npm이 아니라 MCPB(Release 첨부 URL + sha256)라서 npm 계정이 필요 없습니다. 게시 후 https://registry.modelcontextprotocol.io/v0/servers?search=402-lab 에서 확인합니다.
+수동으로 하고 싶을 때만: `npm run build:mcpb` 후 `dist/`에서 `mcp-publisher login github` → `mcp-publisher publish`.
 
 ## 3. Smithery
 

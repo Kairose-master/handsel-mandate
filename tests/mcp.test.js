@@ -149,6 +149,7 @@ test('MCPB manifest, registry template and Cursor config agree with the server',
   assert.equal(manifest.version, registry.version); assert.equal(registry.packages[0].version, manifest.version);
   assert.ok(registry.description.length <= 100);
   assert.match(registry.packages[0].identifier, /^https:\/\/github\.com\/Kairose-master\/handsel-mandate\/releases\/download\//);
+  assert.ok(registry.packages[0].identifier.includes(`/releases/download/mcp-v${manifest.version}/402-lab.mcpb`), 'release tag in the asset URL matches the manifest version');
   for (const v of registry.packages[0].environmentVariables) assert.ok(envUsed.has(v.name), `registry env ${v.name} is read by server.js`);
   for (const name of Object.keys(cursor.mcpServers['402-lab'].env)) assert.ok(envUsed.has(name), `cursor env ${name}`);
   assert.equal(pkg.bin['402-lab-mcp'], 'mcp/server.js'); assert.match(src, /^#!\/usr\/bin\/env node/);

@@ -1,0 +1,62 @@
+name: Release buyer MCP
+# Builds the MCPB bundle, publishes a GitHub Release tagged mcp-v<version>
+# (version from mcp/manifest.json) with the bundle attached, then publishes the
+# server to the official MCP Registry with GitHub OIDC. A version that already
+# has a release is left untouched: bump mcp/manifest.json and
+# mcp/server.registry.json to ship again.
+on:
+  push:
+    branches: [main]
+    paths: ['mcp/**', 'scripts/build-mcpb.sh', '.github/workflows/release-mcp.yml', '.github/release-notes-mcp.md']
+  workflow_dispatch:
+permissions:
+  contents: write
+  id-token: write
+concurrency: release-mcp
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Resolve version
+        id: meta
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(node -p "require('./mcp/manifest.json').version")
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          if gh release view "mcp-v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"; echo "::notice::mcp-v$V already released; bump mcp/manifest.json to ship a new bundle"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.meta.outputs.exists == 'false'
+        run: npm ci
+      - if: steps.meta.outputs.exists == 'false'
+        run: npm test
+      - if: steps.meta.outputs.exists == 'false'
+        run: npm run build:mcpb
+      - name: Create GitHub Release with the bundle
+        if: steps.meta.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.meta.outputs.version }}
+        run: |
+          gh release create "mcp-v$V" dist/402-lab.mcpb dist/server.json \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "402-LAB buyer MCP $V" --notes-file .github/release-notes-mcp.md --prerelease
+          echo "::notice::https://github.com/$GITHUB_REPOSITORY/releases/tag/mcp-v$V"
+      - name: Install mcp-publisher
+        if: steps.meta.outputs.exists == 'false'
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+      - name: Publish to the MCP Registry
+        if: steps.meta.outputs.exists == 'false'
+        run: |
+          ./mcp-publisher login github-oidc
+          cd dist && ../mcp-publisher validate && ../mcp-publisher publish
+          echo "::notice::https://registry.modelcontextprotocol.io/v0/servers?search=io.github.kairose-master/402-lab"
