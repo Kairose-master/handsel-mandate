@@ -1,0 +1,7 @@
+{
+  "name": "402-LAB",
+  "category": "Services/Endpoints",
+  "logoUrl": "/logos/402-lab.png",
+  "description": "Sell a vibe-coded API to AI agents in one afternoon: a paywall proxy that fronts any existing endpoint with x402 (USDC on Base, Bazaar-listed), plus a buyer MCP server where a human says \"stay under $1\" and the agent discovers, pays per call and returns only the result. Live product: Korean business-registration status lookup at 0.02 USDC per call.",
+  "websiteUrl": "https://handsel-mandate-demo.vercel.app"
+}

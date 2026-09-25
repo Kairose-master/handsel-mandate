@@ -10,6 +10,17 @@
 
 빠른 시작: `npm ci && npm test`, `npm run demo`(로컬 시뮬레이션, 키 없음), `npm run mcp`(구매자 지갑).
 
+**구매자 MCP 설치 (저장소 없이)**
+
+[![Add to Cursor](https://img.shields.io/badge/Add%20to-Cursor-blue)](cursor://anysphere.cursor-deeplink/mcp/install?name=402-lab&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImdpdGh1YjpLYWlyb3NlLW1hc3Rlci9oYW5kc2VsLW1hbmRhdGUiXSwiZW52Ijp7IkJVWUVSX1BSSVZBVEVfS0VZIjoiMHhfUkVQTEFDRV9NRSIsIk5FVFdPUksiOiJlaXAxNTU6ODQ1MzIiLCJNQU5EQVRFX01BWF9VU0RDIjoiMSJ9fQ==)
+
+```json
+{ "mcpServers": { "402-lab": { "command": "npx", "args": ["-y", "github:Kairose-master/handsel-mandate"],
+  "env": { "BUYER_PRIVATE_KEY": "0x...", "NETWORK": "eip155:84532", "MANDATE_MAX_USDC": "1" } } } }
+```
+
+Claude Desktop은 `npm run build:mcpb`로 만든 `dist/402-lab.mcpb`를 더블클릭해 설치합니다(키는 설치 화면에서 입력). 레지스트리·Smithery·mcp.so·Cursor 디렉터리·x402 에코시스템 제출 파일과 절차는 [docs/directories.md](docs/directories.md)에 있습니다.
+
 첫 성공 기준은 외부 판매자의 도구를 외부 구매자가 실제로 쓰는 것입니다. 지금까지 정산은 내부 지갑 2건이며 구매자 유입이나 매출을 보장하지 않습니다.
 
 ---

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.kairose-master/402-lab",
+  "description": "Budget-capped x402 buyer: delegate USDC in plain words, agent discovers and pays per call.",
+  "repository": {
+    "url": "https://github.com/Kairose-master/handsel-mandate",
+    "source": "github"
+  },
+  "websiteUrl": "https://handsel-mandate-demo.vercel.app",
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/Kairose-master/handsel-mandate/releases/download/mcp-v0.1.0/402-lab.mcpb",
+      "version": "0.1.0",
+      "fileSha256": "FILLED_BY_scripts/build-mcpb.sh",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "BUYER_PRIVATE_KEY",
+          "description": "0x-prefixed private key of the paying wallet (keep only small amounts)",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "NETWORK",
+          "description": "eip155:84532 (Base Sepolia, default) or eip155:8453 (Base mainnet)",
+          "isRequired": false,
+          "format": "string",
+          "default": "eip155:84532"
+        },
+        {
+          "name": "MANDATE_MAX_USDC",
+          "description": "Absolute cap any mandate may reach",
+          "isRequired": false,
+          "format": "string",
+          "default": "1"
+        },
+        {
+          "name": "CATALOG_URLS",
+          "description": "Comma-separated seller product.json URLs searched besides the x402 Bazaar",
+          "isRequired": false,
+          "format": "string",
+          "default": "https://handsel-mandate-demo.vercel.app/product.json"
+        }
+      ]
+    }
+  ]
+}

@@ -12,7 +12,8 @@
     "mcp": "node mcp/server.js",
     "mcp:http": "node mcp/server.js --http",
     "record:testnet": "node scripts/record-harness.js",
-    "video:x": "bash scripts/video/make-x-video.sh"
+    "video:x": "bash scripts/video/make-x-video.sh",
+    "build:mcpb": "bash scripts/build-mcpb.sh"
   },
   "engines": {
     "node": ">=22"
@@ -35,5 +36,19 @@
     "@ethereumjs/vm": "10.1.3",
     "solc": "0.8.37",
     "solc-wallet": "npm:solc@0.8.23"
-  }
+  },
+  "bin": {
+    "402-lab-mcp": "mcp/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kairose-master/handsel-mandate.git"
+  },
+  "files": [
+    "mcp/server.js",
+    "mcp/wallet.js",
+    "mcp/catalog.js",
+    "mcp/manifest.json",
+    "docs/mcp.md"
+  ]
 }

@@ -8,6 +8,8 @@
 //      BAZAAR=1 to also search the x402 Bazaar, X402_FACILITATOR_URL, STATE_PATH, MCP_TOKEN (http mode).
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
+import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -65,7 +67,9 @@ export async function startHttp({ makeServer }, { port = 4402, host = '127.0.0.1
   return { http, token, url: `http://${host}:${http.address().port}/mcp`, close: () => new Promise(r => http.close(r)) };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Entry check that survives bin symlinks (npx, npm -g) and Windows paths.
+const isMain = (() => { try { return realpathSync(process.argv[1] ?? '') === fileURLToPath(import.meta.url); } catch { return false; } })();
+if (isMain) {
   const built = buildServer();
   const i = process.argv.indexOf('--http');
   if (i >= 0) {
