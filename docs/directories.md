@@ -78,7 +78,13 @@ Settings → Extensions → Advanced → **Install Extension…** 에서 `402-la
 
 ## 7. x402 에코시스템 페이지 (x402.org/ecosystem)
 
-파일 두 개를 x402-foundation/x402 저장소에 PR로 냅니다.
+파일 두 개를 x402-foundation/x402 저장소에 PR로 냅니다. gh CLI가 로그인돼 있으면 한 줄로 끝납니다:
+
+```bash
+bash scripts/submit-x402-ecosystem.sh
+```
+
+수동으로 할 때:
 
 ```bash
 git clone https://github.com/<본인fork>/x402 && cd x402
