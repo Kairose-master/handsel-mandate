@@ -21,9 +21,14 @@ async function loadStatus() {
   $('product-price').textContent = status.product.price;
   $('product-endpoint').textContent = `GET ${status.product.endpoint}`;
   $('product-payto').textContent = status.product.payTo;
-  $('curl-example').textContent = `curl -i ${status.product.endpoint}\n# → HTTP/1.1 402 Payment Required\n# → PAYMENT-REQUIRED: <base64 x402 v2 quote: exact · ${status.network} · USDC · ${status.product.price}>`;
+  $('product-post').textContent = status.product.mainEndpoint;
+  const ex = status.product.exampleRequest ? JSON.stringify(status.product.exampleRequest) : '{}';
+  $('curl-example').textContent = `# 1) 가격 확인 (무료)\ncurl -i ${status.product.endpoint}\n# → HTTP/1.1 402 Payment Required\n# → PAYMENT-REQUIRED: <base64 x402 v2 quote: exact · ${status.network} · USDC · ${status.product.price}>\n\n# 2) 직접 입력으로 호출 (같은 가격, x402 클라이언트가 402 → 서명 → 재요청)\ncurl -X POST ${status.product.mainEndpoint.replace(/^POST /, '')} \\\n  -H 'content-type: application/json' \\\n  -d '${ex}'\n\n# 3) MCP로: "0.05달러 안에서 이 사업자번호들 상태 확인해줘" → discover → buy`;
+  const bz = status.bazaar;
+  if (bz && bz.indexed !== null && bz.indexed !== undefined) { $('bazaar-stats').hidden = false; $('bazaar-stats').textContent = bz.indexed ? `x402 Bazaar 등재 · 최근 30일 호출 ${bz.l30DaysTotalCalls ?? 0}건 · 구매자 ${bz.l30DaysUniquePayers ?? 0}명${bz.lastCalledAt ? ` · 마지막 호출 ${new Date(bz.lastCalledAt).toLocaleDateString()}` : ''}` : 'x402 Bazaar 등재 대기 중 (첫 정산 후 자동 등재)'; }
   const info = $('agent-info'); info.replaceChildren();
-  if (mainnet) { $('run').closest('section').hidden = true; }
+  // Mainnet: hide only the browser-run purchase card; the request example must stay visible.
+  if (mainnet) { $('run').closest('.demo-card').hidden = true; const summarySmall = document.querySelector('#demo summary small'); if (summarySmall) summarySmall.textContent = '가격 확인과 직접 호출 예제를 봅니다.'; }
   if (status.agent) {
     const b = status.agent.budget;
     for (const [k, v] of [['데모 에이전트', status.agent.address], ['건당 한도', `${usdc(b.perCall)} USDC`], ['남은 총예산', `${usdc(b.remaining)} / ${usdc(b.total)} USDC (예산 만료 ${new Date(b.expiresAt).toLocaleTimeString()})`], ['이 시간 구매', String(b.purchases)]]) {

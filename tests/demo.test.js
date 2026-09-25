@@ -174,3 +174,26 @@ test('402 carries an enriched Bazaar declaration and the paid payload echoes it 
     assert.equal(sample.extensions.bazaar.info.input.method, 'GET');
   } finally { await demo.close(); }
 });
+
+test('product.json carries terms and contact; wrong method on the tool path gets a 405 hint; status exposes Bazaar stats', async () => {
+  const probe = createDemoServer({ mode: 'local', payTo: PAY_TO, publicBaseUrl: 'http://127.0.0.1:1' });
+  const { port } = await probe.listen(0, '127.0.0.1'); await probe.close();
+  const facilitator = new LocalSimulationFacilitator();
+  const demo = createDemoServer({ mode: 'testnet', payTo: PAY_TO, publicBaseUrl: 'https://demo.example', facilitator, bazaarStatsReader: async () => ({ indexed: true, l30DaysTotalCalls: 7, l30DaysUniquePayers: 3 }) });
+  await demo.initialize(); await demo.listen(port, '127.0.0.1');
+  const base = `http://127.0.0.1:${port}`;
+  try {
+    const product = await (await fetch(`${base}/product.json`)).json();
+    assert.match(product.terms.settlement, /no refunds/);
+    assert.match(product.contact, /github\.com/);
+    const wrong = await fetch(`${base}/convert`);
+    assert.equal(wrong.status, 405); assert.equal(wrong.headers.get('allow'), 'POST'); assert.match((await wrong.json()).error, /GET \/convert\/sample/);
+    const status = await (await fetch(`${base}/demo/status`)).json();
+    assert.deepEqual(status.bazaar, { indexed: true, l30DaysTotalCalls: 7, l30DaysUniquePayers: 3 });
+    assert.deepEqual(status.product.exampleRequest, { markdown: '| a | b |\n|---|---|\n| 1 | 2 |' });
+    for (const asset of ['/assets/hero.jpg', '/assets/og.jpg', '/favicon.svg']) { const r = await fetch(`${base}${asset}`); assert.equal(r.status, 200, asset); }
+  } finally { await demo.close(); }
+  const local = createDemoServer({ mode: 'local', payTo: PAY_TO, publicBaseUrl: 'http://127.0.0.1:1' });
+  await local.initialize(); const { port: p2 } = await local.listen(0, '127.0.0.1');
+  try { assert.equal((await (await fetch(`http://127.0.0.1:${p2}/demo/status`)).json()).bazaar, null, 'no Bazaar lookups in local mode'); } finally { await local.close(); }
+});
