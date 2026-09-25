@@ -29,13 +29,13 @@ npm run build:mcpb
 `.github/workflows/release-mcp.yml`이 main에 `mcp/**`가 푸시될 때마다 실행됩니다.
 
 1. `mcp/manifest.json`의 version을 읽어 `mcp-v<version>` 릴리스가 없으면 번들을 빌드하고 릴리스를 만들어 `402-lab.mcpb`와 `server.json`을 첨부합니다.
-2. 같은 잡이 GitHub OIDC로 `mcp-publisher login github-oidc` → `publish` 해서 `io.github.kairose-master/402-lab`을 레지스트리에 올립니다. npm 계정도 토큰도 필요 없습니다.
+2. 같은 잡이 GitHub OIDC로 `mcp-publisher login github-oidc` → `publish` 해서 `io.github.Kairose-master/402-lab`을 레지스트리에 올립니다. npm 계정도 토큰도 필요 없습니다.
 3. 이미 릴리스된 버전은 건드리지 않습니다. 새로 배포하려면 `mcp/manifest.json`과 `mcp/server.registry.json`의 version(과 identifier의 `mcp-v…`)을 함께 올리고 main에 머지합니다. 테스트가 두 파일의 버전 일치를 검사합니다.
 
 결과 링크
 - 릴리스: https://github.com/Kairose-master/handsel-mandate/releases/tag/mcp-v0.1.0
 - 번들 직링크: https://github.com/Kairose-master/handsel-mandate/releases/download/mcp-v0.1.0/402-lab.mcpb
-- 레지스트리 조회: https://registry.modelcontextprotocol.io/v0/servers?search=io.github.kairose-master/402-lab
+- 레지스트리 조회: https://registry.modelcontextprotocol.io/v0/servers?search=io.github.Kairose-master/402-lab
 - 실행 로그: https://github.com/Kairose-master/handsel-mandate/actions/workflows/release-mcp.yml
 
 수동으로 하고 싶을 때만: `npm run build:mcpb` 후 `dist/`에서 `mcp-publisher login github` → `mcp-publisher publish`.
@@ -43,10 +43,10 @@ npm run build:mcpb
 ## 3. Smithery
 
 1. https://smithery.ai/new → **Local (MCPB Bundle)** 탭
-2. `dist/402-lab.mcpb` 업로드, 이름 `kairose-master/402-lab`
+2. `dist/402-lab.mcpb` 업로드, 이름 `Kairose-master/402-lab`
 3. 서버 페이지의 Settings → Verification 체크리스트(저장소 연결) 완료.
 
-CLI를 쓰면: `npx @smithery/cli mcp publish ./dist/402-lab.mcpb -n kairose-master/402-lab`
+CLI를 쓰면: `npx @smithery/cli mcp publish ./dist/402-lab.mcpb -n Kairose-master/402-lab`
 
 ## 4. mcp.so
 
@@ -113,6 +113,6 @@ CDP Discord(https://discord.gg/cdp)의 x402 쇼케이스/빌더 채널과 x402 F
 ## 확인 방법
 
 - 레지스트리: `curl "https://registry.modelcontextprotocol.io/v0/servers?search=402-lab"`
-- Smithery: https://smithery.ai/server/kairose-master/402-lab
+- Smithery: https://smithery.ai/server/Kairose-master/402-lab
 - x402 에코시스템: PR 병합 후 https://x402.org/ecosystem 에서 402-LAB 검색
 - 일일 루틴이 판매 신청 이슈와 메인넷 정산을 계속 확인합니다. 디렉터리 유입은 `/demo/status`의 external 구매 수로 드러납니다.
