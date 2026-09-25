@@ -34,7 +34,7 @@ export function productFor({ publicBaseUrl, price, payTo, mode, tool, network = 
     format: 'blockflow.product.v1', status: mode === 'mainnet' ? 'production' : mode === 'testnet' ? 'testnet-preview' : 'local-simulation',
     name: tool.name, description: tool.description, network, currency: 'USDC', testnet: mode !== 'mainnet', price, payTo,
     endpoints: [
-      { method: 'GET', url: `${main}/sample`, description: tool.builtin ? '번들된 샘플 문서를 변환합니다. 입력이 없어 GET 전용 x402 클라이언트도 구매할 수 있습니다.' : '판매자가 등록한 예제 입력으로 도구를 호출합니다. 입력이 없어 GET 전용 x402 클라이언트도 구매할 수 있습니다.' },
+      { method: 'GET', url: `${main}/sample`, description: tool.sampleDescription ?? (tool.exampleRequest ? '예제 입력으로 도구를 호출합니다. 입력이 없어 GET 전용 x402 클라이언트도 구매할 수 있습니다.' : '번들된 샘플 문서를 변환합니다. 입력이 없어 GET 전용 x402 클라이언트도 구매할 수 있습니다.') },
       { method: tool.method, url: main, description: tool.method === 'POST' ? 'JSON 본문을 도구에 전달합니다.' : '도구를 호출합니다.', request: tool.exampleRequest ?? undefined },
     ],
     exampleResponse: tool.exampleResponse ?? undefined,
@@ -199,7 +199,7 @@ export function createDemoServer(options = {}) {
       if (method === 'GET' && url.pathname === `${tool.path}/sample`) return await handlePaid(req, res, url, ctx => tool.runSample(ctx));
       if (method === tool.method && url.pathname === tool.path) return await handlePaid(req, res, url, ctx => tool.run(req, ctx));
       if (url.pathname === tool.path && method !== 'OPTIONS') return send(res, 405, { error: `Use ${tool.method} ${tool.path} with a JSON body, or GET ${tool.path}/sample`, exampleRequest: tool.exampleRequest ?? null }, { Allow: tool.method });
-      if (method === 'GET' && url.pathname === '/product.json') return send(res, 200, product, { 'Access-Control-Allow-Origin': '*' });
+      if (method === 'GET' && url.pathname === '/product.json') { const bazaar = await bazaarStats(); return send(res, 200, bazaar?.indexed == null ? product : { ...product, verification: { ...product.verification, bazaarIndexed: bazaar.indexed === true } }, { 'Access-Control-Allow-Origin': '*' }); }
       if (method === 'GET' && url.pathname === '/health') return send(res, 200, { ok: true, mode, network, testnet: mode !== 'mainnet' });
       if (method === 'GET' && url.pathname === '/demo/status') return send(res, 200, { mode, testnet: mode !== 'mainnet', network, product: { name: product.name, description: product.description, price, payTo, endpoint: `${publicBaseUrl}${tool.path}/sample`, mainEndpoint: `${tool.method} ${publicBaseUrl}${tool.path}`, exampleRequest: tool.exampleRequest ?? null, proxiedUpstream: !tool.builtin }, bazaar: await bazaarStats(), agent: agent ? { address: agent.address, budget: agent.budget(), funding: await agentFunding() } : null, purchases: { external: ledger.external, internal: ledger.internal, note: '서버 데모 에이전트와 등록된 내부 주소의 구매는 internal로 따로 셉니다.' }, recent: ledger.entries.slice(-10).map(e => ({ at: e.at, route: e.route, amount: e.amount, transaction: e.transaction, internal: e.internal, bazaar: e.bazaar ?? null, explorer: mode === 'testnet' && /^0x[0-9a-fA-F]{64}$/.test(e.transaction ?? '') ? `${BASESCAN.testnet}${e.transaction}` : mode === 'mainnet' && /^0x[0-9a-fA-F]{64}$/.test(e.transaction ?? '') ? `${BASESCAN.mainnet}${e.transaction}` : null })) });
       if (method === 'POST' && url.pathname === '/demo/run') return await handleDemoRun(res);

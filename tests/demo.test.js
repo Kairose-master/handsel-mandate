@@ -186,6 +186,8 @@ test('product.json carries terms and contact; wrong method on the tool path gets
     const product = await (await fetch(`${base}/product.json`)).json();
     assert.match(product.terms.settlement, /no refunds/);
     assert.match(product.contact, /github\.com/);
+    assert.equal(product.verification.bazaarIndexed, true, 'product.json reflects the live Bazaar index state');
+    assert.match(product.endpoints[0].description, /예제 입력으로|샘플 문서/);
     const wrong = await fetch(`${base}/convert`);
     assert.equal(wrong.status, 405); assert.equal(wrong.headers.get('allow'), 'POST'); assert.match((await wrong.json()).error, /GET \/convert\/sample/);
     const status = await (await fetch(`${base}/demo/status`)).json();
