@@ -20,12 +20,8 @@ process.stdout.write(JSON.stringify({ name: "402-lab-mcp", version: m.version, p
 ' > "$STAGE/package.json"
 (cd "$STAGE" && npm install --omit=dev --no-audit --no-fund --silent)
 npx --yes @anthropic-ai/mcpb@2 pack "$STAGE" dist/402-lab.mcpb
+node scripts/registry-manifest.mjs dist/402-lab.mcpb dist/server.json
 SHA=$(sha256sum dist/402-lab.mcpb | cut -d' ' -f1)
-node -e '
-const s = require("./mcp/server.registry.json");
-s.packages[0].fileSha256 = process.argv[1];
-process.stdout.write(JSON.stringify(s, null, 2) + "\n");
-' "$SHA" > dist/server.json
 echo "bundle  dist/402-lab.mcpb ($(du -h dist/402-lab.mcpb | cut -f1))"
 echo "sha256  $SHA"
 echo "registry manifest  dist/server.json"

@@ -2,17 +2,20 @@ name: Release buyer MCP
 # Builds the MCPB bundle, publishes a GitHub Release tagged mcp-v<version>
 # (version from mcp/manifest.json) with the bundle attached, then publishes the
 # server to the official MCP Registry with GitHub OIDC. A version that already
-# has a release is left untouched: bump mcp/manifest.json and
-# mcp/server.registry.json to ship again.
+# has a release keeps its bundle (bump mcp/manifest.json and
+# mcp/server.registry.json to ship again); the registry publish is retried
+# until that version is listed.
 on:
   push:
     branches: [main]
-    paths: ['mcp/**', 'scripts/build-mcpb.sh', '.github/workflows/release-mcp.yml', '.github/release-notes-mcp.md']
+    paths: ['mcp/**', 'scripts/build-mcpb.sh', 'scripts/registry-manifest.mjs', '.github/workflows/release-mcp.yml', '.github/release-notes-mcp.md']
   workflow_dispatch:
 permissions:
   contents: write
   id-token: write
 concurrency: release-mcp
+env:
+  SERVER_NAME: io.github.Kairose-master/402-lab
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -22,7 +25,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - name: Resolve version
+      - name: Resolve version and state
         id: meta
         env:
           GH_TOKEN: ${{ github.token }}
@@ -30,18 +33,22 @@ jobs:
           V=$(node -p "require('./mcp/manifest.json').version")
           echo "version=$V" >> "$GITHUB_OUTPUT"
           if gh release view "mcp-v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"; echo "::notice::mcp-v$V already released; bump mcp/manifest.json to ship a new bundle"
+            echo "released=true" >> "$GITHUB_OUTPUT"; echo "::notice::mcp-v$V already released; bundle kept"
           else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "released=false" >> "$GITHUB_OUTPUT"
           fi
-      - if: steps.meta.outputs.exists == 'false'
+          LISTED=$(curl -sS "https://registry.modelcontextprotocol.io/v0/servers?search=$SERVER_NAME&version=$V" \
+            | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);const hit=(j.servers??[]).some(x=>{const m=x.server??x;return m.name===process.argv[1]&&m.version===process.argv[2]});console.log(hit?"true":"false")})' "$SERVER_NAME" "$V")
+          echo "listed=$LISTED" >> "$GITHUB_OUTPUT"
+          [ "$LISTED" = true ] && echo "::notice::$SERVER_NAME $V is already in the MCP Registry" || true
+      - if: steps.meta.outputs.released == 'false'
         run: npm ci
-      - if: steps.meta.outputs.exists == 'false'
+      - if: steps.meta.outputs.released == 'false'
         run: npm test
-      - if: steps.meta.outputs.exists == 'false'
+      - if: steps.meta.outputs.released == 'false'
         run: npm run build:mcpb
       - name: Create GitHub Release with the bundle
-        if: steps.meta.outputs.exists == 'false'
+        if: steps.meta.outputs.released == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           V: ${{ steps.meta.outputs.version }}
@@ -50,13 +57,23 @@ jobs:
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "402-LAB buyer MCP $V" --notes-file .github/release-notes-mcp.md --prerelease
           echo "::notice::https://github.com/$GITHUB_REPOSITORY/releases/tag/mcp-v$V"
+      - name: Rebuild server.json from the released bundle
+        if: steps.meta.outputs.released == 'true' && steps.meta.outputs.listed == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.meta.outputs.version }}
+        run: |
+          mkdir -p dist
+          gh release download "mcp-v$V" --repo "$GITHUB_REPOSITORY" --pattern 402-lab.mcpb --dir dist --clobber
+          node scripts/registry-manifest.mjs dist/402-lab.mcpb dist/server.json
+          gh release upload "mcp-v$V" dist/server.json --repo "$GITHUB_REPOSITORY" --clobber
       - name: Install mcp-publisher
-        if: steps.meta.outputs.exists == 'false'
+        if: steps.meta.outputs.listed == 'false'
         run: |
           curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
       - name: Publish to the MCP Registry
-        if: steps.meta.outputs.exists == 'false'
+        if: steps.meta.outputs.listed == 'false'
         run: |
           ./mcp-publisher login github-oidc
           cd dist && ../mcp-publisher validate && ../mcp-publisher publish
-          echo "::notice::https://registry.modelcontextprotocol.io/v0/servers?search=io.github.kairose-master/402-lab"
+          echo "::notice::https://registry.modelcontextprotocol.io/v0/servers?search=$SERVER_NAME"

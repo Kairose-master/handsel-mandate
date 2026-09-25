@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.kairose-master/402-lab",
+  "name": "io.github.Kairose-master/402-lab",
   "title": "402-LAB",
   "description": "Budget-capped x402 buyer: delegate USDC in plain words, agent discovers and pays per call.",
   "repository": {
