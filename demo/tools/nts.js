@@ -36,6 +36,7 @@ export function ntsTool({ serviceKey, fetcher = fetch, upstream = UPSTREAM } = {
     name: '사업자등록 상태 조회 (국세청)',
     description: '사업자등록번호를 넣으면 국세청 기준 사업자 상태(계속·휴업·폐업), 과세유형, 폐업일을 돌려줍니다. 한 번에 최대 100건, 인증키 불필요. Korea business registration status check: given Korean business registration numbers (사업자등록번호), returns the National Tax Service (NTS) status (active / suspended / closed), VAT taxpayer type and closure date, up to 100 numbers per call. Source: NTS via data.go.kr.',
     serviceName: 'Korea Business Status (NTS)', tags: ['korea', 'business', 'registration', 'nts', 'verify'],
+    terms: { dataSource: '국세청 사업자등록정보 상태조회 (공공데이터포털, 이용허락범위 제한 없음)', maxItemsPerCall: MAX_NUMBERS, upstreamQuota: '100 items per call, 1,000,000 per day (shared)', inputs: 'business registration numbers only; not stored or logged' },
     method: 'POST', path: '/biz/status', builtin: true,
     exampleRequest: NTS_EXAMPLE_REQUEST, exampleResponse: NTS_EXAMPLE_RESPONSE,
     runSample: () => lookup(NTS_EXAMPLE_REQUEST.b_no),

@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { appendFile, readFile } from 'node:fs/promises';
 import { x402ResourceServer, x402HTTPResourceServer, HTTPFacilitatorClient } from '@x402/core/server';
 import { createCdpFacilitatorClient } from '@coinbase/cdp-sdk/x402';
-import { declareDiscoveryExtension, bazaarResourceServerExtension } from '@x402/extensions/bazaar';
+import { declareDiscoveryExtension, bazaarResourceServerExtension, withBazaar } from '@x402/extensions/bazaar';
 import { ExactEvmScheme } from '@x402/evm/exact/server';
 import { builtinTool } from './upstream.js';
 import { LocalSimulationFacilitator, NETWORK } from './facilitator-local.js';
@@ -25,7 +25,7 @@ export function usdcBalanceReader(rpcUrl = 'https://sepolia.base.org', mode = 't
   return address => client.readContract({ address: token, abi: parseAbi(['function balanceOf(address) view returns (uint256)']), functionName: 'balanceOf', args: [address] });
 }
 
-const PAGE_FILES = new Map([['/', ['page.html', 'text/html']], ['/page.js', ['page.js', 'text/javascript']], ['/page.css', ['page.css', 'text/css']], ['/assets/hero.png', ['assets/hero.png', 'image/png']], ['/favicon.svg', ['favicon.svg', 'image/svg+xml']]]);
+const PAGE_FILES = new Map([['/', ['page.html', 'text/html']], ['/page.js', ['page.js', 'text/javascript']], ['/page.css', ['page.css', 'text/css']], ['/assets/hero.jpg', ['assets/hero.jpg', 'image/jpeg']], ['/assets/og.jpg', ['assets/og.jpg', 'image/jpeg']], ['/favicon.svg', ['favicon.svg', 'image/svg+xml']]]);
 const same = (a, b) => typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
 
 export function productFor({ publicBaseUrl, price, payTo, mode, tool, network = mode === 'mainnet' ? MAINNET_NETWORK : NETWORK }) {
@@ -39,6 +39,8 @@ export function productFor({ publicBaseUrl, price, payTo, mode, tool, network = 
     ],
     exampleResponse: tool.exampleResponse ?? undefined,
     howToBuy: [`GET/POST 요청 → HTTP 402와 PAYMENT-REQUIRED 헤더(x402 v2, exact, ${network} USDC)를 받습니다.`, '요청한 금액의 EIP-3009 TransferWithAuthorization을 서명해 PAYMENT-SIGNATURE 헤더로 재요청합니다.', '200 응답 본문이 도구 결과, PAYMENT-RESPONSE 헤더가 정산 정보입니다.'],
+    terms: { settlement: 'x402 exact (EIP-3009 USDC) per call, paid directly to payTo; no escrow, no refunds', failedCalls: 'a verified payment is cancelled when the tool does not return 2xx', privacy: 'request inputs are not logged', ...(tool.terms ?? {}) },
+    contact: 'https://github.com/Kairose-master/handsel-mandate/issues', docs: 'https://github.com/Kairose-master/handsel-mandate/blob/main/docs/terms.md',
     verification: { onchainSettlement: mode === 'testnet' || mode === 'mainnet', bazaarIndexed: false, proxiedUpstream: !tool.builtin },
   };
 }
@@ -103,6 +105,22 @@ export function createDemoServer(options = {}) {
     return { usdcBalance: v === null ? null : (Number(v) / 1e6).toFixed(6).replace(/\.?0+$/, ''), funded: v === null ? null : v >= priceMicro, address: agent.address, faucet: FAUCET, network, error: balanceCache.error };
   }
   const log = options.log ?? (() => {});
+  // Durable public metrics come from the x402 Bazaar (30-day calls / unique payers), not from instance memory.
+  let bazaarCache = { at: 0, value: null };
+  async function bazaarStats() {
+    if (mode === 'local') return null;
+    if (Date.now() - bazaarCache.at < 600000) return bazaarCache.value;
+    try {
+      const value = options.bazaarStatsReader ? await options.bazaarStatsReader() : await (async () => {
+        const c = withBazaar(new HTTPFacilitatorClient({ url: options.bazaarUrl ?? 'https://api.cdp.coinbase.com/platform/v2/x402', timeoutMs: 10000 }));
+        const s = await c.extensions.bazaar.search({ query: tool.name, network, type: 'http' });
+        const hit = (s.resources ?? []).find(i => String(i.resource).startsWith(`${publicBaseUrl}${tool.path}`));
+        return hit ? { indexed: true, ...(hit.quality ?? {}) } : { indexed: false };
+      })();
+      bazaarCache = { at: Date.now(), value };
+    } catch (error) { bazaarCache = { at: Date.now(), value: { indexed: null, error: error.message } }; }
+    return bazaarCache.value;
+  }
 
   const accepts = { scheme: 'exact', network, asset, price: `$${price}`, payTo, maxTimeoutSeconds: 60 };
   const routes = {
@@ -180,9 +198,10 @@ export function createDemoServer(options = {}) {
       if (method === 'OPTIONS') { res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, PAYMENT-SIGNATURE', 'Access-Control-Expose-Headers': 'PAYMENT-REQUIRED, PAYMENT-RESPONSE' }); return res.end(); }
       if (method === 'GET' && url.pathname === `${tool.path}/sample`) return await handlePaid(req, res, url, ctx => tool.runSample(ctx));
       if (method === tool.method && url.pathname === tool.path) return await handlePaid(req, res, url, ctx => tool.run(req, ctx));
+      if (url.pathname === tool.path && method !== 'OPTIONS') return send(res, 405, { error: `Use ${tool.method} ${tool.path} with a JSON body, or GET ${tool.path}/sample`, exampleRequest: tool.exampleRequest ?? null }, { Allow: tool.method });
       if (method === 'GET' && url.pathname === '/product.json') return send(res, 200, product, { 'Access-Control-Allow-Origin': '*' });
       if (method === 'GET' && url.pathname === '/health') return send(res, 200, { ok: true, mode, network, testnet: mode !== 'mainnet' });
-      if (method === 'GET' && url.pathname === '/demo/status') return send(res, 200, { mode, testnet: mode !== 'mainnet', network, product: { name: product.name, description: product.description, price, payTo, endpoint: `${publicBaseUrl}${tool.path}/sample`, mainEndpoint: `${tool.method} ${publicBaseUrl}${tool.path}`, proxiedUpstream: !tool.builtin }, agent: agent ? { address: agent.address, budget: agent.budget(), funding: await agentFunding() } : null, purchases: { external: ledger.external, internal: ledger.internal, note: '서버 데모 에이전트와 등록된 내부 주소의 구매는 internal로 따로 셉니다.' }, recent: ledger.entries.slice(-10).map(e => ({ at: e.at, route: e.route, amount: e.amount, transaction: e.transaction, internal: e.internal, bazaar: e.bazaar ?? null, explorer: mode === 'testnet' && /^0x[0-9a-fA-F]{64}$/.test(e.transaction ?? '') ? `${BASESCAN.testnet}${e.transaction}` : mode === 'mainnet' && /^0x[0-9a-fA-F]{64}$/.test(e.transaction ?? '') ? `${BASESCAN.mainnet}${e.transaction}` : null })) });
+      if (method === 'GET' && url.pathname === '/demo/status') return send(res, 200, { mode, testnet: mode !== 'mainnet', network, product: { name: product.name, description: product.description, price, payTo, endpoint: `${publicBaseUrl}${tool.path}/sample`, mainEndpoint: `${tool.method} ${publicBaseUrl}${tool.path}`, exampleRequest: tool.exampleRequest ?? null, proxiedUpstream: !tool.builtin }, bazaar: await bazaarStats(), agent: agent ? { address: agent.address, budget: agent.budget(), funding: await agentFunding() } : null, purchases: { external: ledger.external, internal: ledger.internal, note: '서버 데모 에이전트와 등록된 내부 주소의 구매는 internal로 따로 셉니다.' }, recent: ledger.entries.slice(-10).map(e => ({ at: e.at, route: e.route, amount: e.amount, transaction: e.transaction, internal: e.internal, bazaar: e.bazaar ?? null, explorer: mode === 'testnet' && /^0x[0-9a-fA-F]{64}$/.test(e.transaction ?? '') ? `${BASESCAN.testnet}${e.transaction}` : mode === 'mainnet' && /^0x[0-9a-fA-F]{64}$/.test(e.transaction ?? '') ? `${BASESCAN.mainnet}${e.transaction}` : null })) });
       if (method === 'POST' && url.pathname === '/demo/run') return await handleDemoRun(res);
       const page = method === 'GET' || method === 'HEAD' ? PAGE_FILES.get(url.pathname) : undefined;
       if (page) {

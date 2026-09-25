@@ -1,12 +1,22 @@
-# 402-LAB — agent commerce prototype
+# 402-LAB — 바이브코딩 제품을 에이전트에게 판매
 
-## Public Demo · 테스트넷 구매 데모
+**라이브:** https://handsel-mandate-demo.vercel.app (Base 메인넷, 실제 USDC). 지금 파는 상품은 국세청 사업자등록 상태 조회, 호출당 0.02 USDC, x402 Bazaar 등재. [이용 안내](docs/terms.md).
 
-공식 x402 SDK 기반 공개 데모입니다. 확인 가능한 정산은 Base Sepolia 테스트넷입니다. 402-LAB MCP가 외부 판매자 GetBags의 API를 0.01 test USDC에 구매한 tx: [Base Sepolia](https://sepolia.basescan.org/tx/0xd02557b808ed70e8533e153bcfb132d3ead8c6e931cb13e43f1936359e6279df). 이 기록은 우리 에이전트가 외부 서비스를 구매한 증거이며, 외부 사용자가 402-LAB 상품을 구매했거나 메인넷 매출이 발생했다는 뜻은 아닙니다. 공개 데모: **https://handsel-mandate-demo.vercel.app**. 판매자 연결 및 테스트넷 모드 안내는 [docs/public-demo.md](docs/public-demo.md)를 참고하세요.
+세 부분으로 되어 있습니다.
 
-## 402-LAB MCP · "1달러 안에서" 위임
+- **판매자 쪽** `demo/` — 공식 x402 SDK로 만든 결제 게이트. 우리 상품(`demo/tools/nts.js`)을 팔고, 판매자의 기존 API 앞에도 그대로 세울 수 있습니다(`demo/upstream.js`, Seller Studio 내보내기 + `UPSTREAM_SECRET`). 402 응답에 Bazaar 발견 메타데이터가 포함됩니다. [운영·배포·확인 절차](docs/public-demo.md)
+- **구매자 쪽** `mcp/` — 402-LAB MCP 서버. "1달러 안에서"라고 위임하면 Claude Desktop·Cursor·크롬 확장이 x402 Bazaar에서 상품을 찾아 예산 안에서만 결제하고 결과만 돌려줍니다. 상한·건당 한도·네트워크·판매자 허용 목록을 서버가 강제합니다. `npm run mcp`. [설정과 권한 모델](docs/mcp.md)
+- **홍보·운영** — [홍보 문안과 영상 제작](docs/launch-copy.md), [판매 신청서](https://github.com/Kairose-master/handsel-mandate/issues/new?template=sell-your-tool.yml).
 
-사람이 자연어로 예산을 위임하면 MCP 클라이언트(크롬 확장·Aside·Claude Desktop·Cursor)가 `discover`로 x402 상품을 찾고 `buy`로 예산 안에서만 결제해 결과만 돌려줍니다. 서버가 상한·건당 한도·네트워크·판매자 허용 목록을 강제하고 예약은 서명 전에 기록됩니다. `npm run mcp`(stdio) 또는 `npm run mcp:http`(확장용). [docs/mcp.md](docs/mcp.md).
+빠른 시작: `npm ci && npm test`, `npm run demo`(로컬 시뮬레이션, 키 없음), `npm run mcp`(구매자 지갑).
+
+첫 성공 기준은 외부 판매자의 도구를 외부 구매자가 실제로 쓰는 것입니다. 지금까지 정산은 내부 지갑 2건이며 구매자 유입이나 매출을 보장하지 않습니다.
+
+---
+
+## Handsel Mandate — 브라우저 프로토타입 (원형)
+
+아래는 402-LAB의 바탕이 된 온체인 위임 프로토타입 문서입니다. 현재 라이브 서비스에는 연결돼 있지 않습니다.
 
 ## Seller Studio · 판매자용 초안
 
