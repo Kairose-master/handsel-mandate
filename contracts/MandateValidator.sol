@@ -5,13 +5,15 @@ interface IReplaySafeWallet {
     function replaySafeHash(bytes32 hash) external view returns (bytes32);
 }
 
-/// @notice Testnet-only Coinbase Smart Wallet contract owner for reserved USDC payments.
-/// @dev No arbitrary execution or signature approval. Reservations are never refunded.
-contract MandateValidator {
-    address public constant TOKEN = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+/// @notice Narrow contract-owner guard for one Coinbase Smart Wallet.
+/// @dev Reservations are irreversible. The wallet's human owner retains root authority.
+abstract contract MandateValidatorBase {
     address public immutable wallet;
-    bytes32 private constant TYPEHASH = keccak256("TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)");
+    address public immutable token;
     bytes32 public immutable tokenDomain;
+    uint256 public immutable networkChainId;
+    bytes32 private constant TYPEHASH = keccak256("TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)");
+
     struct Grant {
         address agent;
         address recipient;
@@ -38,12 +40,14 @@ contract MandateValidator {
     event Reserved(bytes32 indexed grantId, bytes32 indexed digest, bytes32 nonce, uint256 amount);
     event Revoked(bytes32 indexed grantId);
 
-    constructor(address wallet_) {
-        require(block.chainid == 84532 && wallet_.code.length != 0, "testnet deployed wallet required");
+    constructor(address wallet_, address token_, uint256 chainId_, string memory tokenName_) {
+        require(block.chainid == chainId_ && wallet_.code.length != 0 && token_.code.length != 0, "wrong deployment context");
         wallet = wallet_;
+        token = token_;
+        networkChainId = chainId_;
         tokenDomain = keccak256(abi.encode(
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-            keccak256("USDC"), keccak256("2"), block.chainid, TOKEN
+            keccak256(bytes(tokenName_)), keccak256("2"), chainId_, token_
         ));
     }
 
@@ -84,8 +88,7 @@ contract MandateValidator {
         emit Reserved(id, digest, a.nonce, a.value);
     }
 
-    /// @dev Require the session signature as well as a reservation, so public reservation
-    /// calldata alone cannot be used to front-run the merchant's settlement.
+    /// @dev Approves only the agent signature over a prior exact reservation.
     function isValidSignature(bytes32 digest, bytes calldata signature) external view returns (bytes4) {
         Reservation memory r = reservations[digest];
         Grant memory g = grants[r.grantId];
@@ -102,4 +105,14 @@ contract MandateValidator {
         }
         return 0xffffffff;
     }
+}
+
+/// @notice Base Sepolia deployment. Retained for testnet rehearsal.
+contract MandateValidator is MandateValidatorBase {
+    constructor(address wallet_) MandateValidatorBase(wallet_, 0x036CbD53842c5426634e7929541eC2318f3dCF7e, 84532, "USDC") {}
+}
+
+/// @notice Base mainnet deployment. Deploy only after independent security review.
+contract MandateValidatorMainnet is MandateValidatorBase {
+    constructor(address wallet_) MandateValidatorBase(wallet_, 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913, 8453, "USD Coin") {}
 }

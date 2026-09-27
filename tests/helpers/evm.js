@@ -10,8 +10,8 @@ export function compile(sources,compiler=solc){
  if(out.errors?.some(e=>e.severity==='error'))throw Error(out.errors.map(e=>e.formattedMessage).join('\n'));
  return Object.assign({},...Object.values(out.contracts));
 }
-export async function evm(){
- const common=createCustomCommon({...Mainnet,chainId:84532},{hardfork:Hardfork.Cancun}),vm=await createVM({common});
+export async function evm(chainId=84532){
+ const common=createCustomCommon({...Mainnet,chainId},{hardfork:Hardfork.Cancun}),vm=await createVM({common});
  const users=[];
  for(let i=1;i<=4;i++){
   const pk=hexToBytes('0x'+i.toString(16).padStart(64,'0')),address=createAddressFromPrivateKey(pk);

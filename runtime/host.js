@@ -14,14 +14,19 @@ function save(s){const temp=statePath+'.tmp';const fd=fs.openSync(temp,'w',0o600
 async function dispatch(msg){
   if((fs.statSync(configPath).mode&0o077)!==0)throw Error('config.local.json must be owner-only (chmod 600)');
   const c=JSON.parse(fs.readFileSync(configPath,'utf8'));
-  if(c.network!=='eip155:84532')throw Error('Mainnet is disabled');
+  if(!['eip155:84532','eip155:8453'].includes(c.network))throw Error('Unsupported network');
+  if(c.network==='eip155:8453'&&c.allowMainnet!==true)throw Error('Mainnet is disabled; set allowMainnet=true after reviewing the live-asset warning');
+  if(c.network==='eip155:8453'&&!c.session)throw Error('Base mainnet requires the onchain session validator; legacy signers are disabled');
   const u=new URL(c.endpoint);
   if(u.protocol!=='https:'||u.username||u.password||u.hash)throw Error('Configure an HTTPS endpoint');
   if(!/^0x[0-9a-fA-F]{40}$/.test(c.payTo))throw Error('Invalid recipient');
   fs.mkdirSync(lock); // Cross-process exclusion; fail closed after a crashed host.
   try {
     const s=fs.existsSync(statePath)?JSON.parse(fs.readFileSync(statePath,'utf8')):{mandate:null,receipts:[]};
-    if(msg.type==='aa.provision')return await provisionAA(c);
+    if(msg.type==='aa.provision'){
+      if(c.network!=='eip155:84532')throw Error('The legacy AA provision path is Base Sepolia only');
+      return await provisionAA(c);
+    }
     if(msg.type==='live.revoke'){
       if(s.mandate){s.mandate.revoked=true;save(s);
         if(c.session){s.mandate.revokeTransaction=await revokeSession(c,s.mandate);save(s);}
@@ -29,7 +34,7 @@ async function dispatch(msg){
     }
     if(c.session){
       const ctx=await checkSession(c);
-      if(msg.type==='live.status')return {...s,aa:{address:ctx.s.wallet,type:'onchain-reserved-session'},agent:ctx.account.address,endpoint:c.endpoint,payTo:c.payTo};
+      if(msg.type==='live.status')return {...s,network:c.network,aa:{address:ctx.s.wallet,type:'onchain-reserved-session'},agent:ctx.account.address,endpoint:c.endpoint,payTo:c.payTo};
       if(msg.type==='live.create'){
         if(s.mandate&&!s.mandate.revoked&&Date.now()<s.mandate.expiresAt)throw Error('Revoke previous mandate first');
         const m=liveMandate(msg.input,c);m.mode='onchain-session';m.expiresAt=Math.floor(m.expiresAt/1000)*1000;

@@ -5,29 +5,39 @@ import {privateKeyToAccount} from 'viem/accounts';
 import {units} from '../extension/policy.js';
 import {createAASigner} from './aa.js';
 import {assertWorkflowBinding} from './blockflow.js';
-import {sessionSigner} from './session.js';
+import {sessionSigner,SESSION_NETWORKS} from './session.js';
 import {verifySettlement} from './settlement.js';
 
 export const NETWORK='eip155:84532';
 export const ASSET='0x036cbd53842c5426634e7929541ec2318f3dcf7e';
+const networkOf=config=>{
+  const network=config.network??NETWORK;
+  if(network==='eip155:8453'&&config.allowMainnet!==true)throw Error('Set allowMainnet=true before any Base mainnet payment');
+  if(network==='eip155:8453'&&!config.session)throw Error('Base mainnet payments require the onchain session validator');
+  return network;
+};
 export function validateQuote(required, config, mandate, now=Date.now()) {
+  const network=networkOf(config),net=SESSION_NETWORKS[network];
+  if(!net)throw Error('Unsupported payment network');
   if (!mandate || mandate.revoked || now>=mandate.expiresAt) throw Error('Mandate inactive or expired');
   if(mandate.endpoint!==config.endpoint || mandate.payTo.toLowerCase()!==config.payTo.toLowerCase()) throw Error('Seller configuration changed; issue a new mandate');
   if(required.x402Version!==2 || required.resource?.url!==config.endpoint) throw Error('Unsupported version or resource');
-  const q=required.accepts?.find(q=>q.scheme==='exact' && q.network===NETWORK && q.asset?.toLowerCase()===ASSET && q.payTo?.toLowerCase()===config.payTo.toLowerCase());
+  const q=required.accepts?.find(q=>q.scheme==='exact' && q.network===network && q.asset?.toLowerCase()===net.asset && q.payTo?.toLowerCase()===config.payTo.toLowerCase());
   if(!q || !/^[1-9]\d{0,12}$/.test(q.amount)) throw Error('No approved payment option');
   const amount=Number(q.amount);
   if(q.extra?.assetTransferMethod && q.extra.assetTransferMethod!=='eip3009') throw Error('Only EIP-3009 supported');
-  if(q.extra?.name!=='USDC' || q.extra?.version!=='2') throw Error('Unexpected token domain');
+  if(q.extra?.name!==net.domainName || q.extra?.version!=='2') throw Error('Unexpected token domain');
   if(!Number.isInteger(q.maxTimeoutSeconds)||q.maxTimeoutSeconds<1||q.maxTimeoutSeconds>300) throw Error('Authorization timeout outside 1–300 seconds');
   if(now+q.maxTimeoutSeconds*1000>mandate.expiresAt) throw Error('Authorization would outlive mandate');
   if(amount>mandate.perCall || mandate.reserved+amount>mandate.total) throw Error('Budget exceeded');
   return q;
 }
 export function liveMandate(input,config,now=Date.now()) {
+  const network=networkOf(config),net=SESSION_NETWORKS[network];
+  if(!net)throw Error('Unsupported payment network');
   const total=units(input.total),perCall=units(input.perCall),minutes=Number(input.minutes);
-  if(total>1000000||perCall>total||!Number.isInteger(minutes)||minutes<1||minutes>60) throw Error('Testnet maximum: 1 USDC and 60 minutes');
-  return {id:crypto.randomUUID(),mode:'base-sepolia-aa',network:NETWORK,asset:ASSET,endpoint:config.endpoint,payTo:config.payTo,total,perCall,reserved:0,expiresAt:now+minutes*60000,revoked:false};
+  if(total>1000000||perCall>total||!Number.isInteger(minutes)||minutes<1||minutes>60) throw Error('Current validator cap: at most 1 USDC and 60 minutes');
+  return {id:crypto.randomUUID(),mode:network==='eip155:8453'?'base-mainnet-aa':'base-sepolia-aa',network,asset:net.asset,endpoint:config.endpoint,payTo:config.payTo,total,perCall,reserved:0,expiresAt:now+minutes*60000,revoked:false};
 }
 async function limitedText(response){
   const reader=response.body?.getReader();if(!reader)return '';
@@ -49,13 +59,13 @@ export async function buy(config,state,request,save,{fetcher=fetch,verifyWorkflo
   if(!header||header.length>20000)throw Error('Missing or oversized PAYMENT-REQUIRED');
   const required=decodePaymentRequiredHeader(header);
   const q=validateQuote(required,config,m);
-  const receipt={requestId:request.requestId,mandateId:m.id,amount:Number(q.amount),asset:ASSET,status:'reserved',at:Date.now(),network:NETWORK};
+  const network=networkOf(config),receipt={requestId:request.requestId,mandateId:m.id,amount:Number(q.amount),asset:SESSION_NETWORKS[network].asset,status:'reserved',at:Date.now(),network};
   m.reserved+=receipt.amount;state.receipts.push(receipt);await save(state);
   // Reservations remain consumed after errors: a signed authorization might settle later.
   try {
     const signer=config.session?(await sessionFactory(config,m,async patch=>{Object.assign(receipt,patch);await save(state);})).account:config.aa?(await signerFactory(config)).account:privateKeyToAccount(config.privateKey);
     if((config.aa||config.session)&&signer.address.toLowerCase()!==m.aaAddress?.toLowerCase())throw Error('AA signer does not match mandate');
-    const client=new x402Client().register(NETWORK,new ExactEvmScheme(signer));
+    const client=new x402Client().register(network,new ExactEvmScheme(signer));
     const payment=await client.createPaymentPayload({...required,accepts:[q],extensions:undefined});
     receipt.authorization=payment.payload.authorization;await save(state);
     const response=await fetcher(config.endpoint,{...options,signal:AbortSignal.timeout(20000),headers:{'PAYMENT-SIGNATURE':encodePaymentSignatureHeader(payment)}});

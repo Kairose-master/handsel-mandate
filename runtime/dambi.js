@@ -1,4 +1,4 @@
-const CHAIN='eip155:84532';
+const DEFAULT_CHAIN='eip155:84532';
 
 function address(value,label){
   if(!/^0x[0-9a-fA-F]{40}$/.test(value??''))throw Error(`Invalid ${label}`);
@@ -11,17 +11,17 @@ function uint(value,label){
 }
 
 // Browser-free request contract published by @dambi/core 0.0.1.
-export function dambiCheckRequest(typedData){
-  return {kind:'typed_signature',chainId:CHAIN,from:address(typedData.message?.from,'payment sender'),typedData};
+export function dambiCheckRequest(typedData,network=DEFAULT_CHAIN){
+  return {kind:'typed_signature',chainId:network,from:address(typedData.message?.from,'payment sender'),typedData};
 }
 
-export function decodeX402Action(typedData){
+export function decodeX402Action(typedData,network=DEFAULT_CHAIN){
   const m=typedData.message??{};
   if(!/^0x[0-9a-fA-F]{64}$/.test(m.nonce??''))throw Error('Invalid payment nonce');
   return {
-    meta:{submission:'offchain_sig',chainId:CHAIN,signer:address(m.from,'payment sender')},
+    meta:{submission:'offchain_sig',chainId:network,signer:address(m.from,'payment sender')},
     body:{domain:'token',token:{action:'eip3009_transfer_authorization',eip3009_transfer_authorization:{
-      token:{key:{standard:'erc20',chain:CHAIN,address:address(typedData.domain?.verifyingContract,'payment token')}},
+      token:{key:{standard:'erc20',chain:network,address:address(typedData.domain?.verifyingContract,'payment token')}},
       owner:address(m.from,'payment sender'),recipient:address(m.to,'payment recipient'),amount:uint(m.value,'payment amount'),
       valid_after:uint(m.validAfter,'validAfter'),valid_before:uint(m.validBefore,'validBefore'),nonce:m.nonce.toLowerCase()
     }}}
@@ -57,7 +57,7 @@ export function enforceDambiVerdict(verdict){
 }
 
 export async function checkX402Risk(typedData,mandate,evaluator=evaluateX402Action){
-  const request=dambiCheckRequest(typedData),action=decodeX402Action(typedData);
+  const request=dambiCheckRequest(typedData,mandate.network??DEFAULT_CHAIN),action=decodeX402Action(typedData,mandate.network??DEFAULT_CHAIN);
   const verdict=await evaluator({request,action,mandate});
   enforceDambiVerdict(verdict);
   return {request,action,verdict};
