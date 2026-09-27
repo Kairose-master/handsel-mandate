@@ -8,6 +8,17 @@ const testOptions=extra=>({verifyWorkflow:()=>true,...extra});
 const required=()=>({x402Version:2,resource:{url:config.endpoint},accepts:[{scheme:'exact',network:NETWORK,asset:ASSET,amount:'1000',payTo:config.payTo,maxTimeoutSeconds:60,extra:{name:'USDC',version:'2'}}]});
 const state=()=>({mandate:liveMandate({total:'0.01',perCall:'0.005',minutes:30},config),receipts:[]});
 test('testnet quote accepted',()=>assert.equal(validateQuote(required(),config,state().mandate).amount,'1000'));
+test('mainnet quote binds the native Base USDC asset and signing domain',()=>{
+ const main={...config,network:'eip155:8453',allowMainnet:true,session:{}};
+ const mandate=liveMandate({total:'0.01',perCall:'0.005',minutes:30},main);
+ const quote={x402Version:2,resource:{url:main.endpoint},accepts:[{scheme:'exact',network:'eip155:8453',asset:'0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',amount:'1000',payTo:main.payTo,maxTimeoutSeconds:60,extra:{name:'USD Coin',version:'2'}}]};
+ assert.equal(mandate.network,'eip155:8453');assert.equal(mandate.asset,quote.accepts[0].asset);
+ assert.equal(validateQuote(quote,main,mandate).amount,'1000');
+ assert.throws(()=>liveMandate({total:'0.01',perCall:'0.005',minutes:30},{...main,allowMainnet:false}),/allowMainnet/);
+ for(const patch of [{network:'eip155:84532'},{extra:{name:'USDC',version:'2'}}]){
+  const bad=structuredClone(quote);Object.assign(bad.accepts[0],patch);assert.throws(()=>validateQuote(bad,main,mandate));
+ }
+});
 for(const [field,value] of [['network','eip155:8453'],['asset',config.payTo],['payTo',ASSET],['amount','9999999'],['maxTimeoutSeconds',999999]])test('reject changed '+field,()=>{const r=required();r.accepts[0][field]=value;assert.throws(()=>validateQuote(r,config,state().mandate));});
 test('real SDK produces verifiable EIP-3009 signature across 402 retry',async()=>{
  const s=state();let calls=0,saves=0;

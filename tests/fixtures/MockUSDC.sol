@@ -11,7 +11,8 @@ contract MockUSDC {
     function transferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce,bytes calldata signature) external {
         require(block.timestamp>validAfter && block.timestamp<validBefore,"time");
         require(!authorizationState[from][nonce],"used nonce");
-        bytes32 domain=keccak256(abi.encode(keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),keccak256("USDC"),keccak256("2"),block.chainid,address(this)));
+        bytes32 nameHash=block.chainid==8453?keccak256("USD Coin"):keccak256("USDC");
+        bytes32 domain=keccak256(abi.encode(keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),nameHash,keccak256("2"),block.chainid,address(this)));
         bytes32 digest=keccak256(abi.encodePacked(hex"1901",domain,keccak256(abi.encode(keccak256("TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)"),from,to,value,validAfter,validBefore,nonce))));
         require(ISignatureWallet(from).isValidSignature(digest,signature)==0x1626ba7e,"signature");
         authorizationState[from][nonce]=true;balanceOf[from]-=value;balanceOf[to]+=value;

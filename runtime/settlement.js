@@ -1,12 +1,14 @@
 import {parseAbi,decodeEventLog,createPublicClient,http} from 'viem';
-import {baseSepolia} from 'viem/chains';
+import {base,baseSepolia} from 'viem/chains';
 const abi=parseAbi(['event Transfer(address indexed from,address indexed to,uint256 value)','event AuthorizationUsed(address indexed authorizer,bytes32 indexed nonce)']);
 const same=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.toLowerCase()===b.toLowerCase();
 export async function verifySettlement(config,receipt,{client}={}){
+  const network=config.network??'eip155:84532',chain=network==='eip155:8453'?base:network==='eip155:84532'?baseSepolia:null;
+  const chainId=chain?.id;
   const s=receipt.settlement,a=receipt.authorization;
-  if(!a||s?.network!=='eip155:84532'||s.success!==true||!/^0x[0-9a-fA-F]{64}$/.test(s.transaction??''))throw Error('Missing settlement transaction or authorization');
-  client??=createPublicClient({chain:baseSepolia,transport:http(config.session?.rpcUrl??config.aa?.rpcUrl,{timeout:15000,retryCount:0})});
-  if(await client.getChainId()!==84532)throw Error('Settlement RPC chain mismatch');
+  if(!chain||!a||s?.network!==network||s.success!==true||!/^0x[0-9a-fA-F]{64}$/.test(s.transaction??''))throw Error('Missing settlement transaction or authorization');
+  client??=createPublicClient({chain,transport:http(config.session?.rpcUrl??config.aa?.rpcUrl,{timeout:15000,retryCount:0})});
+  if(await client.getChainId()!==chainId)throw Error('Settlement RPC chain mismatch');
   const tx=await client.getTransactionReceipt({hash:s.transaction});
   if(tx.status!=='success')throw Error('Settlement transaction reverted');
   const block=await client.getBlock({blockNumber:tx.blockNumber});

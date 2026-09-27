@@ -1,4 +1,10 @@
-# v0.4: Onchain payment reservations
+# v0.5: Onchain payment reservations
+
+## Base mainnet port status
+
+Source support now includes a separate `MandateValidatorMainnet` artifact for Base chain ID 8453 and native Base USDC. The runtime, quote checks, settlement reconciliation, and owner CLI select the artifact and token domain from `network`. Mainnet is opt-in only: set `allowMainnet: true` in the local config, and every owner CLI operation also requires `--confirm-mainnet`.
+
+**This is not a mainnet deployment or security approval.** No public deployment, wallet installation, live purchase, facilitator compatibility test, or independent audit has been completed. Do not install this custom validator on a wallet holding funds until those checks are complete. The checked-in `runtime/config.mainnet.example.json` is a template, not an operational configuration.
 
 The agent process holds only its own gas-paying EOA key. The human's existing Coinbase Smart Account holds USDC. A non-upgradeable `MandateValidator` is installed as one contract owner of that smart account. Its ERC-1271 callback approves only replay-safe hashes of explicitly reserved USDC EIP-3009 transfers. It exposes no arbitrary execution, upgrade, raw-hash approval, or owner-key signing method.
 
@@ -7,9 +13,9 @@ This is a narrow Coinbase contract-owner adapter, not a generic ERC-7579 module 
 ## Setup
 
 1. Node 22+, `npm ci`. Clone and install BlockFlow at commit `a43efa3788115a16e12f0ebea22416ed61de053d`, with a clean working tree. Configure its absolute path.
-2. Use an already deployed, human-owned Coinbase Smart Account on Base Sepolia. The v0.3 provisioning path may be used first, then remove its owner key and AA config completely from the agent runtime. Keep only test USDC in the smart account and test ETH in the human/agent EOAs for gas.
+2. Use an already deployed, human-owned Coinbase Smart Account on Base Sepolia for testnet rehearsal. Mainnet requires a separately deployed Coinbase Smart Account on Base. The v0.3 provisioning path may be used first on Sepolia, then remove its owner key and AA config completely from the agent runtime. Keep only the intended test USDC in the smart account and gas ETH in the human/agent EOAs.
 3. Copy `runtime/config.example.json` to `runtime/config.local.json`, fill `session.wallet`, HTTPS RPC, a fresh `session.agentPrivateKey`, approved endpoint and recipient. `chmod 600 runtime/config.local.json`. Do not add an owner key to this file. Install the native host using `node runtime/install-host.js HANDSEL_EXTENSION_ID`.
-4. In a separate human-controlled terminal, provide the existing owner key as `OWNER_PRIVATE_KEY` through your secret manager/environment. Do not paste it into chat, the extension, repository, or shell history. Run `node scripts/owner.js install`. This deploys the validator and calls the smart account's `addOwnerAddress`. It checks validator bytecode and saves its address and owner index; a repeated install recovers a previously completed deployment.
+4. In a separate human-controlled terminal, provide the existing owner key as `OWNER_PRIVATE_KEY` through your secret manager/environment. Do not paste it into chat, the extension, repository, or shell history. On Sepolia, run `node scripts/owner.js install`. This deploys the testnet validator and calls the smart account's `addOwnerAddress`. It checks validator bytecode and saves its address and owner index; a repeated install recovers a previously completed deployment.
 5. In the extension, make a mandate draft. Creation compiles BlockFlow and binds its artifact hashes, account, validator, agent, endpoint, recipient, amount limits and expiry. This does not grant permission yet.
 6. Run `node scripts/owner.js review`. Inspect recipient, agent, account, total/per-call micro-USDC, expiry and binding. Then run `node scripts/owner.js grant REVIEWED_BINDING`. The explicit binding must match; the CLI recompiles the workflow before the human owner grants authority via the smart account. Never expose this terminal/environment to the agent.
 7. Buy through the paired agent or panel. Runtime reads the actual onchain grant. Each x402 authorization triggers an agent-signed `reserve` transaction; only after a successful receipt and wallet `isValidSignature` check is the x402 payload returned to the seller.
@@ -32,6 +38,6 @@ The pinned clean compiler parses the fixed supported BPMN, validates structure/s
 
 Local EVM tests run the actual upstream Coinbase wallet runtime (initialized directly in fresh EVM storage), this validator and a clearly marked EIP-3009 USDC test double. They cover real x402 payload settlement, unauthorized execution/grants, wrong payer/payee/amount/time, total-budget exhaustion, duplicate nonce, revocation and expiry. This is not a test of the deployed Coinbase proxy/factory, a live bundler, Circle's deployed USDC, or a remote facilitator.
 
-No public-chain deployment or transfer was performed for this change. Public Base Sepolia proof still requires funded test accounts, an installed module, a compatible seller/facilitator and transaction hashes. The custom validator has not received an independent security audit. No mainnet deployment is supported.
+No public-chain deployment or transfer was performed for this change. Public Base Sepolia proof still requires funded test accounts, an installed module, a compatible seller/facilitator and transaction hashes. The custom validator has not received an independent security audit. The mainnet port has not been deployed or security reviewed.
 
 Source references: [Coinbase wallet](https://github.com/coinbase/smart-wallet), [x402 wallet compatibility](https://docs.x402.org/advanced-concepts/wallet-compatibility), [BlockFlow](https://github.com/Kairose-master/BlockFlow). The vendored source closure in `tests/fixtures/coinbase-sources.json` records the exact wallet commit and preserves upstream SPDX headers. `node scripts/vendor-wallet-fixture.js PATH_TO_UPSTREAM` regenerates it from upstream with its pinned submodules. `node scripts/compile-contracts.js` regenerates the validator deployment artifact.

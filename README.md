@@ -25,9 +25,9 @@ Claude Desktop은 `npm run build:mcpb`로 만든 `dist/402-lab.mcpb`를 더블�
 
 ---
 
-## Handsel Mandate — 브라우저 프로토타입 (원형)
+## Handsel Mandate — 브라우저 위임 프로토타입
 
-아래는 402-LAB의 바탕이 된 온체인 위임 프로토타입 문서입니다. 현재 라이브 서비스에는 연결돼 있지 않습니다.
+아래는 402-LAB의 바탕이 된 온체인 위임 경로입니다. `runtime/buyer.js`는 고정 판매자 엔드포인트에 연결되고, 이제 Base Sepolia와 별도 Base 메인넷 컨트랙트 아티팩트를 지원합니다. **메인넷 아티팩트는 아직 배포·설치·보안 검토되지 않았으며 공개 라이브 결제 서비스와의 실제 호환성도 확인되지 않았습니다.** MCP 구매자 경로와는 별도입니다.
 
 ## Seller Studio · 판매자용 초안
 
@@ -35,9 +35,9 @@ Claude Desktop은 `npm run build:mcpb`로 만든 `dist/402-lab.mcpb`를 더블�
 
 사람이 예산·허용 도구·만료를 지정하고 브라우저 에이전트가 그 범위 안에서 모의 구매하는 Chrome MV3 확장 초안입니다.
 
-**v0.4: 온체인 제한 권한 + BlockFlow + x402.** Coinbase Smart Account에 `MandateValidator`를 컨트랙트 소유자로 설치합니다. 사람이 승인한 총예산·건당 한도·수령인·만료·에이전트·BlockFlow 바인딩을 체인에 기록하고, 에이전트가 결제 금액을 먼저 예약한 경우에만 해당 EIP-3009 결제를 허용합니다. 메인넷은 차단됩니다.
+**v0.5: 온체인 제한 권한 + BlockFlow + x402.** Coinbase Smart Account에 네트워크별 `MandateValidator`를 컨트랙트 소유자로 설치합니다. 사람이 승인한 총예산·건당 한도·수령인·만료·에이전트·BlockFlow 바인딩을 체인에 기록하고, 에이전트가 결제 금액을 먼저 예약한 경우에만 해당 EIP-3009 결제를 허용합니다. 메인넷은 `allowMainnet: true`와 owner CLI의 `--confirm-mainnet`이 모두 있어야 활성화됩니다.
 
-새 Session 모드에는 소유자 키가 없으며 에이전트는 임의 전송·새 위임 발급을 할 수 없습니다. 회수가 체인에 확정되면 미결제 예약도 무효화됩니다. 영수증은 RPC의 USDC Transfer + AuthorizationUsed nonce와 대조합니다. 실제 Base Sepolia 배포·정산은 아직 실행하지 않았습니다. [설치·검증 범위](docs/session-payments.md)를 확인하세요. 이전 full-owner 모드는 기존 설정에서만 남아 있으며 동일한 보안 보장을 제공하지 않습니다.
+새 Session 모드에는 소유자 키가 없으며 에이전트는 임의 전송·새 위임 발급을 할 수 없습니다. 회수가 체인에 확정되면 미결제 예약도 무효화됩니다. 영수증은 RPC의 USDC Transfer + AuthorizationUsed nonce와 대조합니다. Sepolia 경로도 공개 체인 설치·정산은 아직 실행하지 않았습니다. 메인넷 포트도 배포·보안 검토 전입니다. [설치·검증 범위](docs/session-payments.md)를 확인하세요. 이전 full-owner 모드는 기존 설정에서만 남아 있으며 동일한 보안 보장을 제공하지 않습니다.
 
 x402 서명은 예산 예약 전에 [DAMBI 호환 사전 정책 게이트](docs/dambi-integration.md)를 통과해야 합니다. 에이전트 실행에서는 `allow / evaluated / enforcing` 판정만 허용합니다.
 

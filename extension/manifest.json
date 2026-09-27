@@ -3,7 +3,7 @@
   "name": "Handsel Mandate · Sandbox",
   "version": "0.4.0",
   "minimum_chrome_version": "116",
-  "description": "BlockFlow-bound agent budgets with Base Sepolia ERC-4337 and x402.",
+  "description": "BlockFlow-bound agent budgets with Base Sepolia or explicitly enabled Base mainnet ERC-4337 and x402.",
   "permissions": [
     "storage",
     "sidePanel",

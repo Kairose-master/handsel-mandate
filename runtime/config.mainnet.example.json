@@ -1,0 +1,14 @@
+{
+  "network": "eip155:8453",
+  "allowMainnet": false,
+  "endpoint": "https://YOUR-MAINNET-SELLER.example/paid",
+  "payTo": "0xYOUR_SELLER_ADDRESS",
+  "blockflowRoot": "/absolute/path/to/BlockFlow",
+  "session": {
+    "wallet": "0xYOUR_EXISTING_COINBASE_SMART_ACCOUNT",
+    "validator": "0xDEPLOYED_MAINNET_VALIDATOR",
+    "ownerIndex": "0",
+    "rpcUrl": "https://YOUR_BASE_MAINNET_RPC",
+    "agentPrivateKey": "0xYOUR_DEDICATED_GAS_KEY"
+  }
+}

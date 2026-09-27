@@ -1,0 +1,41 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {pad,encodeFunctionData,hashTypedData} from 'viem';
+import {privateKeyToAccount} from 'viem/accounts';
+import {bytesToHex} from '@ethereumjs/util';
+import solcWallet from 'solc-wallet';
+import {compile,evm} from './helpers/evm.js';
+import {wrapValidatorSignature,authorizationTypes,expectedTokenDomain} from '../runtime/session.js';
+const fixture=JSON.parse(fs.readFileSync(new URL('./fixtures/coinbase-sources.json',import.meta.url)));
+const walletContract=compile(fixture.sources,solcWallet).CoinbaseSmartWallet;
+const compiled=compile(Object.fromEntries(['../contracts/MandateValidator.sol','./fixtures/MockUSDC.sol'].map(p=>[p,{content:fs.readFileSync(new URL(p,import.meta.url),'utf8')}] )));
+const validatorContract=compiled.MandateValidatorMainnet,tokenContract=compiled.MockUSDC;
+const wallet='0x1000000000000000000000000000000000000000',token='0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+const id='0x'+'31'.repeat(32),nonce=n=>'0x'+n.toString(16).padStart(64,'0');
+
+test('mainnet validator is chain-gated and enforces a real Base mainnet USDC domain',async()=>{
+ const wrong=await evm(84532),[humanWrong]=wrong.users;
+ await wrong.etch(wallet,walletContract);await assert.rejects(async()=>wrong.deploy(humanWrong,validatorContract,[wallet]));
+
+ const h=await evm(8453),[human,agent,seller]=h.users;h.time=1000;
+ await h.etch(wallet,walletContract);await h.etch(token,tokenContract);
+ assert.ok((await h.call(human,wallet,walletContract,'initialize',[[pad(human.hex)]])).ok);
+ const validator=await h.deploy(human,validatorContract,[wallet]);
+ assert.equal((await h.call(human,validator,validatorContract,'token')).value.toLowerCase(),token);
+ assert.equal((await h.call(human,validator,validatorContract,'networkChainId')).value,8453n);
+ assert.equal((await h.call(human,validator,validatorContract,'tokenDomain')).value,expectedTokenDomain('eip155:8453'));
+ assert.ok((await h.call(human,wallet,walletContract,'addOwnerAddress',[validator])).ok);
+ const exec=(fn,args)=>h.call(human,wallet,walletContract,'execute',[validator,0n,encodeFunctionData({abi:validatorContract.abi,functionName:fn,args})]);
+ assert.ok((await exec('grant',[id,agent.hex,seller.hex,20000n,10000n,1300n,id])).ok);
+ await h.call(human,token,tokenContract,'mint',[wallet,30000n]);
+ const a={from:wallet,to:seller.hex,value:10000n,validAfter:900n,validBefore:1200n,nonce:nonce(1)};
+ const digest=hashTypedData({domain:{name:'USD Coin',version:'2',chainId:8453,verifyingContract:token},types:authorizationTypes,primaryType:'TransferWithAuthorization',message:a});
+ const replay=await h.call(agent,wallet,walletContract,'replaySafeHash',[digest]);
+ const signature=wrapValidatorSignature(1,await privateKeyToAccount(bytesToHex(agent.pk)).sign({hash:replay.value}));
+ assert.equal((await h.call(agent,validator,validatorContract,'reserve',[id,a])).ok,true);
+ assert.equal((await h.call(seller,token,tokenContract,'transferWithAuthorization',[a.from,a.to,a.value,a.validAfter,a.validBefore,a.nonce,signature])).ok,true);
+ assert.equal((await h.call(seller,token,tokenContract,'balanceOf',[seller.hex])).value,10000n);
+ assert.equal((await h.call(agent,validator,validatorContract,'reserve',[id,{...a,nonce:nonce(2)}])).ok,true);
+ assert.equal((await h.call(agent,validator,validatorContract,'reserve',[id,{...a,nonce:nonce(3)}])).ok,false,'total cap must hold across fresh nonces');
+});

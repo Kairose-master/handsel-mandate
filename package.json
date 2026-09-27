@@ -12,6 +12,7 @@
     "mcp": "node mcp/server.js",
     "mcp:http": "node mcp/server.js --http",
     "record:testnet": "node scripts/record-harness.js",
+    "compile:contracts": "node scripts/compile-contracts.js",
     "video:x": "bash scripts/video/make-x-video.sh",
     "build:mcpb": "bash scripts/build-mcpb.sh"
   },
