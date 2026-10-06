@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 STAGE=dist/mcpb
 rm -rf "$STAGE" dist/402-lab.mcpb dist/server.json
 mkdir -p "$STAGE"
-cp mcp/server.js mcp/wallet.js mcp/catalog.js mcp/manifest.json "$STAGE"/
+cp mcp/server.js mcp/wallet.js mcp/delegation.js mcp/catalog.js mcp/manifest.json "$STAGE"/
 cp submissions/x402-ecosystem/logos/402-lab.png "$STAGE/icon.png"
 # Only the runtime dependencies the three mcp/*.js files import, pinned to the
 # versions the test suite runs against.

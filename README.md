@@ -88,3 +88,7 @@ BlockFlow는 워크플로 구조를 검증합니다. 예산 제약은 별도로 
 남은 검증은 실제 Base Sepolia USDC와 facilitator를 이용한 배포·정산, 별도 보안 검토, 사람 지갑 승인 UI입니다. 현재 승인은 로컬 human-only CLI이고 구매마다 예약 가스가 발생합니다. 임의 UserOperation에 대한 session 권한이나 범용 ERC-7579 모듈을 주장하지 않습니다.
 
 References: [Chrome Side Panel](https://developer.chrome.com/docs/extensions/reference/api/sidePanel), [Messaging](https://developer.chrome.com/docs/extensions/develop/concepts/messaging), [x402 Bazaar](https://docs.x402.org/extensions/bazaar).
+
+### Experimental principal delegation
+
+The MCP wallet can optionally attach a principal-signed, exact-quote delegation grant via a trusted external signer. See [the experimental adapter profile](docs/experimental-delegation.md) for configuration, canonical bytes, replay scope and limitations. Disabled by default; not x402 standard compliance or production facilitator support.
