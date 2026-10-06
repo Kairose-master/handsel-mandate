@@ -48,6 +48,7 @@
   "files": [
     "mcp/server.js",
     "mcp/wallet.js",
+    "mcp/delegation.js",
     "mcp/catalog.js",
     "mcp/manifest.json",
     "docs/mcp.md"

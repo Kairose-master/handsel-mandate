@@ -32,7 +32,7 @@ async function limitedText(response) {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-export function createWallet({ privateKey, network, statePath, maxMandateUsdc = '1', maxMinutes = 60, fetcher = fetch, now = Date.now }) {
+export function createWallet({ privateKey, network, statePath, maxMandateUsdc = '1', maxMinutes = 60, fetcher = fetch, now = Date.now, delegation = null }) {
   const net = NETWORKS[network];
   if (!net) throw new Error(`Unsupported network ${network}; use eip155:84532 or eip155:8453`);
   if (!/^0x[0-9a-fA-F]{64}$/.test(privateKey ?? '')) throw new Error('BUYER_PRIVATE_KEY must be a 32-byte hex key');
@@ -41,7 +41,7 @@ export function createWallet({ privateKey, network, statePath, maxMandateUsdc = 
   let state = null, queue = Promise.resolve();
   async function load() {
     if (state) return state;
-    try { state = JSON.parse(await readFile(statePath, 'utf8')); } catch { state = { mandate: null, receipts: [] }; }
+    try { state = JSON.parse(await readFile(statePath, 'utf8')); } catch (error) { if (error.code !== 'ENOENT') throw error; state = { mandate: null, receipts: [] }; }
     return state;
   }
   async function save() {
@@ -120,6 +120,20 @@ export function createWallet({ privateKey, network, statePath, maxMandateUsdc = 
         const client = new x402Client().register(network, new ExactEvmScheme(account));
         // Keep the seller's declared extensions (Bazaar discovery info) so the facilitator can index the resource on settlement.
         const payload = await client.createPaymentPayload({ ...required, accepts: [offer] });
+        if (delegation) {
+          const grant = delegation.prepare({ required, offer, payload, agent: account.address, mandateExpiry: m.expiresAt, now: now() });
+          // Durable single-use consumption, within the same serialized budget operation.
+          // Never release after signing: even an uncertain payment may settle later.
+          if (state.receipts.some(r => r.delegationNonce?.toLowerCase() === grant.nonce.toLowerCase())) throw new Error('Delegation replay');
+          receipt.delegationNonce = grant.nonce; receipt.delegationExpiry = grant.expiry;
+          await save();
+          const extension = await delegation.sign(grant, now);
+          if (!active(m)) throw new Error('Mandate expired during principal signing');
+          payload.extensions = { ...payload.extensions, delegation: extension };
+        } else if (payload.extensions?.delegation) {
+          // A seller cannot enable or supply principal authorization for this wallet.
+          delete payload.extensions.delegation;
+        }
         const paid = await fetcher(url, { ...init, signal: AbortSignal.timeout(30000), headers: { ...init.headers, 'PAYMENT-SIGNATURE': encodePaymentSignatureHeader(payload) } });
         receipt.httpStatus = paid.status;
         const settlementHeader = paid.headers.get('PAYMENT-RESPONSE');

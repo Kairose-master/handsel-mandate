@@ -19,7 +19,7 @@ import { createCatalog } from './catalog.js';
 
 export function buildServer(env = process.env, deps = {}) {
   const network = env.NETWORK ?? 'eip155:84532';
-  const wallet = deps.wallet ?? createWallet({ privateKey: env.BUYER_PRIVATE_KEY, network, statePath: env.STATE_PATH ?? new URL('./state.local.json', import.meta.url).pathname, maxMandateUsdc: env.MANDATE_MAX_USDC ?? '1', maxMinutes: Number(env.MANDATE_MAX_MINUTES ?? 60) });
+  const wallet = deps.wallet ?? createWallet({ privateKey: env.BUYER_PRIVATE_KEY, network, statePath: env.STATE_PATH ?? new URL('./state.local.json', import.meta.url).pathname, maxMandateUsdc: env.MANDATE_MAX_USDC ?? '1', maxMinutes: Number(env.MANDATE_MAX_MINUTES ?? 60), delegation: deps.delegation ?? null });
   const catalog = deps.catalog ?? createCatalog({ network, catalogUrls: (env.CATALOG_URLS ?? 'https://handsel-mandate-demo.vercel.app/product.json').split(',').map(s => s.trim()).filter(Boolean), bazaar: env.BAZAAR !== '0', bazaarUrl: env.BAZAAR_URL, maxPrice: env.DISCOVER_MAX_PRICE });
   const net = NETWORKS[network];
   // One McpServer per transport; the wallet/catalog behind it are shared.
